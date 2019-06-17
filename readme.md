@@ -1,11 +1,11 @@
-This repository contains one of the jBPM starter applications from [jBPM - Build your business application](https://start.jbpm.org/) expanded to demonstrate more complete examples.
+### This repository contains one of the jBPM starter applications from [jBPM - Build your business application](https://start.jbpm.org/) expanded to demonstrate more complete examples.
 
 The original-business-* contains the original starter business application. 
   * original-business-application-kjar: A kjar project. The kjar project holds the process flows, business rules, optimization and other information needed to implement and run in the jBPM runtime engine. The default starter kjar only has a default configuration files. Adding process flows will be covered later. The will build as is out of the box and installs with GAV of `com.company:business-application-kjar:1.0-SNAPSHOT`. The `pom.xml` that comes out of the box will cause issues with eclipse m2e and so an entry to fix the warnings from m2e has been added to the project's `pom.xml`.
   * original-business-application-model: A simple java project to be used as an external data model for business processes. The default contains an empty POJO at `com.company.model.Model`.
   * original-business-application-service: The default springboot jBPM service. The default server state is defined in `business-application-service.xml` in the project's root directory. This configuration file defines a deployed and running container with the same GAV value as the business-application-kjar. If you run the server it will initially fail with a java runtime exception `java.lang.RuntimeException: Cannot find KieModule: com.company:business-application-kjar:1.0-SNAPSHOT`. To fix this you must install the kjar into the local maven repository with `mvn install` from the kjar project. Alternatively the container startup information could be removed from the configuration file. Once the springboot jBPM service is started it is running on localhost port 8090. The jBPM REST endpoint can be found at http://localhost:8090/rest/server and is access restricted. The Authorization is configured in the DefaultWebSecurityConfig.java class of the project. 
 
-In order to create and test a simple script I created two projects by copying the respective `original-business-application-*` projects. 
+### In order to create and test a simple script I created two projects by copying the respective `original-business-application-*` projects. 
 
   * first-business-application-kjar: 
   * first-business-application-service:  
@@ -44,3 +44,52 @@ Notice that the `org.jbpm.services.api.ProcessService` is injected into the appl
 
 http://localhost:8090/rest/server/containers
 
+
+### A next logical step to creating a Springboot based jBPM API is to create a simple `Hello, World` API. 
+
+  * second-business-application-kjar: Holds a simple process flow that takes a "name" parameter and prepends a "Hello " on to the front of it in a script task.  
+  * second-business-application-service: Adds a simple `RestController` to start the process flow, pass a name parameter to it, read and return the result.  
+ 
+In order to manipulate a parameter in a business flow a process variable is added to the `simple-process.bpmn2` business process created in the `first-business-application-kjar` project.
+
+The `simple-process.bpmn2` process is opened in the Eclipse BPMN2 modeler. The background of the process is clicked on (just to be sure) and the properties view is opened. The `Data Items` tab is opened selected and the plus `+` sign is clicked in the `Properties List for Process Simple Process` is clicked. A new process var is created with with the name `processVar1` and of `Data Type` `xs:string`. 
+
+The `Script Task 1` is clicked and the `Script Task` tab is opened. The script in the `Script` field is changed to 
+
+    kcontext.setVariable("processVar1", "Hello " + kcontext.getVariable("processVar1"));
+    
+In short, kcontext is available to all business process scripts and allows access to the jBPM API from within a business flow. This new script reads the process variable `processVar1` and prepends the string `Hello ` and stores the result back into the process variable.
+
+Build and install the new kjar into the local maven repository.
+
+Building the service rest interface is just a matter of changing the `Application.java` class. Remove the `CommandlineRunner` support and add `RestController` support. In order to read the result a new jBPM Service Interface is injected, the `RuntimeDataService`. The code is as follows:
+
+	@SpringBootApplication
+	@RestController
+	public class Application  {
+		
+	    @Autowired
+	    private ProcessService processService;
+	    @Autowired
+	    private RuntimeDataService runtimeDataService;
+	
+	    public static void main(String[] args) {
+	        SpringApplication.run(Application.class, args);
+	    }
+	 
+	    @GetMapping("/hello")
+	    public ResponseEntity<String> sayHello(@RequestParam String name) throws Exception {
+	    	Map<String, Object> vars = new HashMap<>();
+	    	vars.put("processVar1", name);
+	    	Long processInstanceId = processService.startProcess("business-application-kjar-1_0-SNAPSHOT", "SimpleProcess", vars);
+	    	for ( VariableDesc var: runtimeDataService.getVariablesCurrentState(processInstanceId) ) {
+	    		if ( var.getVariableId().equals("processVar1"))
+	    	    	return ResponseEntity.ok(var.getNewValue());
+	    	}
+	    	return ResponseEntity.status(HttpStatus.FAILED_DEPENDENCY).body("Processing Error");
+	    }
+	}
+	
+The REST endpoint for this will be http://localhost:8090/hello and a `name` parameter is required. The final test URL could be [http://localhost:8090/hello?name=World](http://localhost:8090/hello?name=World). Invoking with endppoint with your browser will return the result `Hello World`.
+ 
+ 
