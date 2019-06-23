@@ -10,7 +10,7 @@ The original-business-* contains the original starter business application.
   * first-business-application-kjar: 
   * first-business-application-service:  
  
-The first step building a business process service will be to make a process flow. There are two obvious ways to do this. The first is to use the Business Central [Process Designer](https://docs.jboss.org/jbpm/release/7.22.0.Final/jbpm-docs/html_single/#_process_designer) and the second is to use the [Eclipse BPMN 2.0 Modeler](https://docs.jboss.org/jbpm/release/7.22.0.Final/jbpm-docs/html_single/#jBPMEclipseModeler).
+The first step building a business process service will be to make a process flow. There are two obvious ways to do this. The first is to use the Business Central [Process Designer](https://docs.jboss.org/jbpm/release/7.22.0.Final/jbpm-docs/html_single/#_process_designer) and the second is to use the [Eclipse BPMN 2.0 Modeler](https://docs.jboss.org/jbpm/release/7.23.0.Final/jbpm-docs/html_single/#jBPMEclipseModeler).
 
 Using the eclipse plugin would be very simple at this point but it has to be installed in Spring Tool Suite 4. The modeler can be found in the Eclipse Market place under [Eclipse BPMN2 Modeler](http://marketplace.eclipse.org/content/eclipse-bpmn2-modeler?mpc=true&mpc_state=) and so is easy to install.
 
@@ -92,4 +92,39 @@ Building the service rest interface is just a matter of changing the `Applicatio
 	
 The REST endpoint for this will be http://localhost:8090/hello and a `name` parameter is required. The final test URL could be [http://localhost:8090/hello?name=World](http://localhost:8090/hello?name=World). Invoking with endppoint with your browser will return the result `Hello World`.
  
- 
+ ### A Springboot application runs in docker very well and so runs in the cloud very well. This capability is added by default to the jBPM sample applications.   
+
+  * third-business-application-kjar: Same as second-business-application-kjar.  
+  * third-business-application-service: pom.xml modified to point to ../third-business-application-kjar/target/ directory.
+  
+No modification is required to run the springboot-jBPM api under docker but the build process done by maven probably needs to be inspected and updated. 
+
+The `third-business-application-service/pom.xml` file references the `local-repository` directory in the `third-business-application-kjar/target`. 
+
+    <fileSet>
+      <directory>../third-business-application-kjar/target/local-repository/maven</directory>
+      <outputDirectory>opt/jboss/.m2/repository</outputDirectory>        
+    </fileSet>
+    
+This is part of the `fabric8-maven-plugin` maven plugin which invokes docker to build the docker image. In order for the plugin to build the correct docker image the `<directory>` value must point to the `kjar` project. Note that there are two places in the `pom.xml` that has this setting. You can change them both -- one is for building a plain docker image and the other is for building an `openshift` docker image.
+
+Building the docker image is a two step process. First the kjar `local-repository` must be built so that it can be included in the service project.
+
+Build the `kjar` project first from the `third-business-application-kjar` project.
+
+    mvn clean install -Ddocker
+    
+Notice that the docker profile is activated with a property setting instead of the usual maven -P setting. Once built there should be a directory `target/local-repository` in the `third-business-application-kjar` project.
+
+Build the docker image from the `third-business-application-service` project. Be sure that you have an internet connection and docker is properly working on your system. The plugin will download the `fabric8/java-jboss-openjdk8-jdk` image for the OS and Java runtime.
+
+    mvn clean install -Ddocker -Ph2
+     
+Now the docker image can be run.
+
+    docker run -p 8080:8090 apps/business-application-service:1.0-SNAPSHOT
+    
+and the API can be tested with curl
+
+    curl http://localhost:8080/hello?name=test
+    

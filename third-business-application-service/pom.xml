@@ -14,7 +14,7 @@
   </parent>
 
   <properties>
-    <version.org.kie>7.22.0.Final</version.org.kie>
+    <version.org.kie>7.23.0.Final</version.org.kie>
     <maven.compiler.target>1.8</maven.compiler.target>
     <maven.compiler.source>1.8</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -147,7 +147,7 @@
                           </includes>
                         </fileSet>
                         <fileSet>
-                          <directory>../business-application-kjar/target/local-repository/maven</directory>
+                          <directory>../third-business-application-kjar/target/local-repository/maven</directory>
                           <outputDirectory>opt/jboss/.m2/repository</outputDirectory>        
                         </fileSet>
                       </inline>
