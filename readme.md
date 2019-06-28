@@ -1,3 +1,5 @@
+[Integrated jBPM](https://integratedjbpm.home.blog/)
+
 ### This repository contains one of the jBPM starter applications from [jBPM - Build your business application](https://start.jbpm.org/) expanded to demonstrate more complete examples.
 
 The original-business-* contains the original starter business application. 
@@ -255,40 +257,13 @@ These new REST endpoints can be executed with authenticated HTTP requests
 	curl -u mary:mary "http://localhost:8090/hreval?hreval=test+hreval"
 	1
 
-Finally, completed evaluations should be retrievable along with their process variables. A new POJO for the results is created and a new REST endpoint is made to access it.
-
-	public class EvaluationsDto {
-		private String initiator, employee, selfeval, pmeval, hreval;
-		public EvaluationsDto(Collection<VariableDesc> variablesCurrentState) {
-			variablesCurrentState.forEach(v->{
-				switch( v.getVariableId()) {
-				case "initiator":
-					initiator = v.getNewValue();
-					break;
-				case "employee":
-					employee = v.getNewValue();
-					break;
-				case "selfeval":
-					selfeval = v.getNewValue();
-					break;
-				case "hreval":
-					hreval = v.getNewValue();
-					break;
-				case "pmeval":
-					pmeval = v.getNewValue();
-					break;
-				}
-			});
-		}
-		...
-	}
+Finally, completed evaluations should be retrievable along with their process variables. A new REST endpoint is made to access it.
 
     @GetMapping("/completed")
-    public ResponseEntity<List<EvaluationsDto>> completedEvaluations(Principal principal) throws Exception {
+    public ResponseEntity<List<Collection<VariableDesc>>> completedEvaluations(Principal principal) throws Exception {
     	Collection<ProcessInstanceDesc> processInstances = runtimeDataService.getProcessInstances(Collections.singletonList(ProcessInstance.STATE_COMPLETED), principal.getName(), new QueryContext());
-    	return ResponseEntity.ok(
-			processInstances.stream()
-			.map(pi->{return new EvaluationsDto(runtimeDataService.getVariablesCurrentState(pi.getId()));})
+    	return ResponseEntity.ok(processInstances.stream()
+			.map(pi->{return runtimeDataService.getVariablesCurrentState(pi.getId());})
 			.collect(Collectors.toList())
 		);
     }
@@ -296,5 +271,4 @@ Finally, completed evaluations should be retrievable along with their process va
 The new REST endpoint accessed with an authenticated http request:
 
     curl -u mary:mary "http://localhost:8090/completed"
-    [{"initiator":"mary","employee":"jack","selfeval":"test selfeval","pmeval":"test pmeval","hreval":"test hreval"}]
-
+    [[{"variableId":"employee","variableInstanceId":"employee","oldValue":"","newValue":"jack","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:51:30.728+0000"},{"variableId":"initiator","variableInstanceId":"initiator","oldValue":"","newValue":"mary","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:51:30.733+0000"},{"variableId":"selfeval","variableInstanceId":"selfeval","oldValue":"","newValue":"selfeval jack","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:52:21.523+0000"},{"variableId":"pmeval","variableInstanceId":"pmeval","oldValue":"","newValue":"pmeval okay","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:52:50.350+0000"},{"variableId":"hreval","variableInstanceId":"hreval","oldValue":"","newValue":"hreval okay","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:53:11.290+0000"}]]

@@ -12,6 +12,7 @@ import org.jbpm.services.api.ProcessService;
 import org.jbpm.services.api.RuntimeDataService;
 import org.jbpm.services.api.UserTaskService;
 import org.jbpm.services.api.model.ProcessInstanceDesc;
+import org.jbpm.services.api.model.VariableDesc;
 import org.kie.api.runtime.process.ProcessInstance;
 import org.kie.api.runtime.query.QueryContext;
 import org.kie.api.task.model.TaskSummary;
@@ -88,11 +89,10 @@ import org.springframework.web.bind.annotation.RestController;
 	    }
 
 	    @GetMapping("/completed")
-	    public ResponseEntity<List<EvaluationsDto>> completedEvaluations(Principal principal) throws Exception {
+	    public ResponseEntity<List<Collection<VariableDesc>>> completedEvaluations(Principal principal) throws Exception {
 	    	Collection<ProcessInstanceDesc> processInstances = runtimeDataService.getProcessInstances(Collections.singletonList(ProcessInstance.STATE_COMPLETED), principal.getName(), new QueryContext());
-	    	return ResponseEntity.ok(
-    			processInstances.stream()
-    			.map(pi->{return new EvaluationsDto(runtimeDataService.getVariablesCurrentState(pi.getId()));})
+	    	return ResponseEntity.ok(processInstances.stream()
+    			.map(pi->{return runtimeDataService.getVariablesCurrentState(pi.getId());})
     			.collect(Collectors.toList())
 			);
 	    }
