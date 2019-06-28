@@ -128,3 +128,173 @@ and the API can be tested with curl
 
     curl http://localhost:8080/hello?name=test
     
+
+ ### A major step in jBPM process flows is interacting with users and groups. As another general issue working with jBPM is the movement of business process projects in and out of kie-workbench.   
+
+  * forth-business-central-kjar: Project copied from kie-workbench  
+  * forth-business-application-service: Updated with endpoints and users and groups to handle human tasks.
+  
+The heart of the business process is human interactions. The process will be expanded to perform an employee evaluation which is a typical human interaction example in jBPM.
+
+The biggest concern with jBPM and springboot at the moment is creating and managing the business process. The active development for the BPMN process builder is in the kie-workbench but the Eclipse BPMN plugin is closest to the project. The default project so far has been able to handle docker well but the Eclipse plugin builder has not been able to create a project with correct properties as seen earlier when the process id what not able to be set.
+
+The kie-workbench projects can be copied into a java project by using GIT. Git is available when the kie-workbench is running by accessing port 8001.
+
+A project is created in the kie-workbench. As stated it does an employee evaluation the same as the evaluation examples you will find in the jBPM source. There are four process variables, employee, selfeval, hreval, and pmeval. The employee is mapped as an input variable and is assigned to a that employee-user in the `Self Evaluation` task. The `HR Evaluation` and `PM Evaluation` are assigned to the groups `HR` and `PM` respectively. These must be claimed by members of those groups.
+
+Running the project in the workbench allows each user to login and check for tasks in the `task inbox`. When the task is claimed, started, and completed a form is presented that allows the evaluation variables to be entered and saved. Once completed the variables can be inspected in kie-workbench and through the REST interface. Familiarity with creating, running, and managing business processes in kie-workbench is expected.
+
+After building, deploying and testing on kie/business-central workbench the project is pulled with git.
+
+  * A directory is created named forth-business-central-kjar
+  * `git init` is run in the directory to initialize git 
+  * `git add remote kie ssh://krisv@localhost:8001/MySpace/Evaluation` is run to create a connection to the kie/business-central workbench.
+  * `git pull kie master` is run to pull the code from the workbench into the forth-business-central-kjar directory.
+  
+The project can be loaded into Eclipse and built with maven. The project will build properly as is with `mvn test` and the kjar can be installed into the local repository with `mvn install`.
+
+After the new kjar is installed into the local maven repository with it can be deployed and started with the springboot application. The GAV for the new forth-business-central-kjar application is `com.myspace:Evaluation:1.0.0-SNAPSHOT` Remember that currently the deployment in the application is handled by the `business-application-service.xml` file. This will be changed to dreploy the new project.
+
+	  <containers>
+	    <container>
+	      <containerId>Evaluation-1_0_0-SNAPSHOT</containerId>
+	      <releaseId>
+	        <groupId>com.myspace</groupId>
+	        <artifactId>Evaluation</artifactId>
+	        <version>1.0.0-SNAPSHOT</version>
+	      </releaseId>
+          ...
+	  </containers>
+
+The rest interface must be changed to start the evaluation process for a specific employee and then to complete the human tasks based on a `userId`. Since there are three different inputs to the evaluation process, `selfeval`, `hreval`, and `pmeval` there should be three different API endpoints for each stage of the evaluation process. In addition, appropriate users and roles must be added to the application so all human tasks can be claimed, started, and completed.
+
+    @Autowired
+    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
+        auth.inMemoryAuthentication().withUser("john").password("john").roles("PM");
+        auth.inMemoryAuthentication().withUser("mary").password("mary").roles("HR");
+        auth.inMemoryAuthentication().withUser("jack").password("jack").roles("user");
+        auth.inMemoryAuthentication().withUser("user").password("user").roles("kie-server");
+        auth.inMemoryAuthentication().withUser("wbadmin").password("wbadmin").roles("admin");
+        auth.inMemoryAuthentication().withUser("kieserver").password("kieserver1!").roles("kie-server");
+    }
+
+and the new Application class:
+
+	@SpringBootApplication
+	@RestController
+	public class Application  {	
+	    @Autowired
+	    private ProcessService processService;
+	    @Autowired
+	    private RuntimeDataService runtimeDataService;
+	    @Autowired
+	    private UserTaskService userTaskService;
+	
+	    public static void main(String[] args) {
+	        SpringApplication.run(Application.class, args);
+	    }
+	 
+	    @GetMapping("/evaluation")
+	    public ResponseEntity<Long> startEvaluation(Principal principal, @RequestParam String employee) throws Exception {
+	    	Long processInstanceId = -1L;
+	    	if ( principal != null ) {
+		    	Map<String, Object> vars = new HashMap<>();
+		    	vars.put("employee", employee);
+		    	processInstanceId = processService.startProcess("Evaluation-1_0_0-SNAPSHOT", "Evaluation.Evaluation", vars);
+	    	}
+	    	return ResponseEntity.ok(processInstanceId);
+	    }
+	
+	    @GetMapping("/selfeval")
+	    public ResponseEntity<Integer> selfEvaluation(Principal principal, @RequestParam String selfeval) throws Exception {
+    		Map<String, Object> params = new HashMap<>();
+    		params.put("selfeval", selfeval);
+	    	List<TaskSummary> taskSummaries = runtimeDataService.getTasksAssignedAsPotentialOwner(principal.getName(), new QueryFilter());
+	    	taskSummaries.forEach(s->{
+	    		userTaskService.start(s.getId(), principal.getName());
+	    		userTaskService.complete(s.getId(), principal.getName(), params);
+	    	});
+	    	return ResponseEntity.ok(taskSummaries.size());
+	    }
+
+	    @GetMapping("/hreval")
+	    public ResponseEntity<Integer> hrEvaluation(Principal principal, @RequestParam String hreval) throws Exception {
+    		Map<String, Object> params = new HashMap<>();
+    		params.put("hreval", hreval);
+	    	List<TaskSummary> taskSummaries = runtimeDataService.getTasksAssignedAsPotentialOwner(principal.getName(), new QueryFilter());
+	    	taskSummaries.forEach(s->{
+	    		userTaskService.claim(s.getId(), principal.getName());
+	    		userTaskService.start(s.getId(), principal.getName());
+	    		userTaskService.complete(s.getId(), principal.getName(), params);
+	    	});
+	    	return ResponseEntity.ok(taskSummaries.size());
+	    }
+	
+	    @GetMapping("/pmeval")
+	    public ResponseEntity<Integer> pmEvaluation(Principal principal, @RequestParam String pmeval) throws Exception {
+    		Map<String, Object> params = new HashMap<>();
+    		params.put("pmeval", pmeval);
+	    	List<TaskSummary> taskSummaries = runtimeDataService.getTasksAssignedAsPotentialOwner(principal.getName(), new QueryFilter());
+	    	taskSummaries.forEach(s->{
+	    		userTaskService.claim(s.getId(), principal.getName());
+	    		userTaskService.start(s.getId(), principal.getName());
+	    		userTaskService.complete(s.getId(), principal.getName(), params);
+	    	});
+	    	return ResponseEntity.ok(taskSummaries.size());
+	    }
+	}	
+
+These new REST endpoints can be executed with authenticated HTTP requests
+
+	curl -u mary:mary http://localhost:8090/evaluation?employee=jack
+	52
+	curl -u jack:jack "http://localhost:8090/selfeval?selfeval=test+selfeval"
+	1
+	curl -u john:john "http://localhost:8090/pmeval?pmeval=test+pmeval"
+	1
+	curl -u mary:mary "http://localhost:8090/hreval?hreval=test+hreval"
+	1
+
+Finally, completed evaluations should be retrievable along with their process variables. A new POJO for the results is created and a new REST endpoint is made to access it.
+
+	public class EvaluationsDto {
+		private String initiator, employee, selfeval, pmeval, hreval;
+		public EvaluationsDto(Collection<VariableDesc> variablesCurrentState) {
+			variablesCurrentState.forEach(v->{
+				switch( v.getVariableId()) {
+				case "initiator":
+					initiator = v.getNewValue();
+					break;
+				case "employee":
+					employee = v.getNewValue();
+					break;
+				case "selfeval":
+					selfeval = v.getNewValue();
+					break;
+				case "hreval":
+					hreval = v.getNewValue();
+					break;
+				case "pmeval":
+					pmeval = v.getNewValue();
+					break;
+				}
+			});
+		}
+		...
+	}
+
+    @GetMapping("/completed")
+    public ResponseEntity<List<EvaluationsDto>> completedEvaluations(Principal principal) throws Exception {
+    	Collection<ProcessInstanceDesc> processInstances = runtimeDataService.getProcessInstances(Collections.singletonList(ProcessInstance.STATE_COMPLETED), principal.getName(), new QueryContext());
+    	return ResponseEntity.ok(
+			processInstances.stream()
+			.map(pi->{return new EvaluationsDto(runtimeDataService.getVariablesCurrentState(pi.getId()));})
+			.collect(Collectors.toList())
+		);
+    }
+	    
+The new REST endpoint accessed with an authenticated http request:
+
+    curl -u mary:mary "http://localhost:8090/completed"
+    [{"initiator":"mary","employee":"jack","selfeval":"test selfeval","pmeval":"test pmeval","hreval":"test hreval"}]
+
