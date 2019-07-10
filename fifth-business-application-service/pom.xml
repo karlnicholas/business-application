@@ -147,7 +147,7 @@
                           </includes>
                         </fileSet>
                         <fileSet>
-                          <directory>../third-business-application-kjar/target/local-repository/maven</directory>
+                          <directory>../fifth-business-central-kjar/target/local-repository/maven</directory>
                           <outputDirectory>opt/jboss/.m2/repository</outputDirectory>        
                         </fileSet>
                       </inline>
@@ -219,8 +219,8 @@
                           </includes>
                         </fileSet>
                         <fileSet>
-                          <directory>../business-application-kjar/target/local-repository/maven</directory>
-                          <outputDirectory>opt/jboss/.m2/repository</outputDirectory>        
+                          <directory>../fifth-business-central-kjar/target/local-repository/maven</directory>
+                          <outputDirectory>opt/jboss/.m2/repository</outputDirectory>
                         </fileSet>
                       </inline>
                       <user>jboss:jboss:jboss</user>

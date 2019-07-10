@@ -21,7 +21,7 @@
   </configuration>
   <containers>
     <container>
-      <containerId>Evaluation-1_0_0-SNAPSHOT</containerId>
+      <containerId>Evaluation_1.0.0-SNAPSHOT</containerId>
       <releaseId>
         <groupId>com.myspace</groupId>
         <artifactId>Evaluation</artifactId>
