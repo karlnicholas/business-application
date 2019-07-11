@@ -50,6 +50,17 @@
 			<artifactId>jbpm-services-api</artifactId>
 			<version>7.23.0.Final</version>
 		</dependency>
+		<dependency>
+			<groupId>org.kie.server</groupId>
+			<artifactId>kie-server-api</artifactId>
+			<version>7.23.0.Final</version>
+		</dependency>
+		<dependency>
+			<groupId>org.kie.server</groupId>
+			<artifactId>kie-server-client</artifactId>
+			<version>7.23.0.Final</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

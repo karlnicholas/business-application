@@ -1,8 +1,16 @@
 package com.company.client;
 
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
+import org.kie.server.api.model.instance.TaskSummary;
+import org.kie.server.api.model.instance.VariableInstance;
+import org.kie.server.client.KieServicesClient;
+import org.kie.server.client.KieServicesFactory;
+import org.kie.server.client.ProcessServicesClient;
+import org.kie.server.client.UserTaskServicesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -17,11 +25,13 @@ import org.springframework.web.client.RestTemplate;
 
 @SpringBootApplication
 public class Application implements CommandLineRunner  {
-	Logger log = LoggerFactory.getLogger(Application.class);	
-	HttpHeaders headersMary;
-	HttpHeaders headersJack;
-	HttpHeaders headersJohn;
-    RestTemplate restTemplate;
+	private static final Logger log = LoggerFactory.getLogger(Application.class);	
+	private RestTemplate restTemplate;
+	private HttpHeaders headersMary;
+	private HttpHeaders headersJack;
+	private HttpHeaders headersJohn;
+	private String containerId;
+	private String serverUrl;
 
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
@@ -30,148 +40,84 @@ public class Application implements CommandLineRunner  {
 	@Override
 	public void run(String... args) throws Exception {
         restTemplate = new RestTemplate();
-        createRequestEntities();
-//        runCustomApi();
-        runjBPMApi();
+        containerId = "Evaluation_1.0.0-SNAPSHOT";
+        serverUrl = "http://localhost:8090/rest/server";
+        createRequestHeaders();
+        runCustomApi();
+        runjBPMClient();
 	}
 	
 	private void runCustomApi() {
-        ResponseEntity<String> evaluation = 
+        ResponseEntity<Long> evaluation = 
         		restTemplate.exchange("http://localhost:8090/evaluation?employee=jack",
-                        HttpMethod.GET, new HttpEntity<String>(headersMary), String.class);
-        log.info(evaluation.toString());
+                        HttpMethod.GET, new HttpEntity<Void>(headersMary), Long.class);
+        log.info("Started Process Instance: " + evaluation.getBody());
 
-        ResponseEntity<String> selfeval = 
-        		restTemplate.exchange("http://localhost:8090/selfeval?selfeval=did+great",
-                        HttpMethod.GET, new HttpEntity<String>(headersJack), String.class);
-        log.info(selfeval.toString());
+		restTemplate.exchange("http://localhost:8090/selfeval?selfeval=did+great",
+                HttpMethod.GET, new HttpEntity<>(headersJack), Long.class);
 
-        ResponseEntity<String> hreval = 
-        		restTemplate.exchange("http://localhost:8090/hreval?hreval=no+issues",
-                        HttpMethod.GET, new HttpEntity<String>(headersMary), String.class);
-        log.info(hreval.toString());
+		restTemplate.exchange("http://localhost:8090/hreval?hreval=no+issues",
+                HttpMethod.GET, new HttpEntity<>(headersMary), Long.class);
 
-        ResponseEntity<String> pmeval = 
-        		restTemplate.exchange("http://localhost:8090/pmeval?pmeval=projects+done",
-                        HttpMethod.GET, new HttpEntity<String>(headersJohn), String.class);
-        log.info(pmeval.toString());
+		restTemplate.exchange("http://localhost:8090/pmeval?pmeval=projects+done",
+                HttpMethod.GET, new HttpEntity<>(headersJohn), Long.class);
 
-        ResponseEntity<String> completed = 
-        		restTemplate.exchange("http://localhost:8090/completed",
-                        HttpMethod.GET, new HttpEntity<String>(headersMary), String.class);
+        ResponseEntity<List<VariableInstance>> instances = 
+        		restTemplate.exchange("http://localhost:8090/instances?processInstanceId="+evaluation.getBody(),
+                        HttpMethod.GET, new HttpEntity<>(headersMary), new ParameterizedTypeReference<List<VariableInstance>>() {
+						});
 
-        log.info(completed.toString());		
+        for( VariableInstance variableInstance: instances.getBody() ) {
+        	log.info(variableInstance.toString());
+        }
 	}
 
-	private void runjBPMApi() {
-// curl -X POST "http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/processes/Evaluation.Evaluation/instances" -H "accept: application/json" -H "content-type: application/json" -d "{\"employee\": \"jack\"}"
-/*		
-		HttpEntity<String> requestEval = new HttpEntity<>("{\"employee\":\"jack\"}", headersMary); 
-        ResponseEntity<String> evaluation = 
-        		restTemplate.exchange("http://localhost:8090/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/processes/Evaluation.Evaluation/instances",
-                        HttpMethod.POST, 
-                        requestEval, String.class );
-        log.info(evaluation.toString());
-*/        
-/*
-curl -X GET "http://localhost:8080/kie-server/services/rest/server/queries/tasks/instances/pot-owners?page=0&pageSize=10&sortOrder=true" -H "accept: application/json"
-{
-  "task-summary": [
-    {
-      "task-id": 4,
-      "task-name": "Self Evaluation",
-      "task-subject": "",
-      "task-description": "",
-      "task-status": "Reserved",
-      "task-priority": 0,
-      "task-is-skipable": false,
-      "task-actual-owner": "jack",
-      "task-created-by": "jack",
-      "task-created-on": {
-        "java.util.Date": 1562709707390
-      },
-      "task-activation-time": {
-        "java.util.Date": 1562709707390
-      },
-      "task-expiration-time": null,
-      "task-proc-inst-id": 2,
-      "task-proc-def-id": "Evaluation.Evaluation",
-      "task-container-id": "Evaluation_1.0.0-SNAPSHOT",
-      "task-parent-id": -1
-    }
-  ]
-}
-http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/tasks/4/states/started
-curl -X PUT "http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/tasks/4/states/completed" -H "accept: application/json" -H "content-type: application/json" -d "{\"selfeval\": \"did great work\"}"
- */
-		HttpEntity<String> findSelfEval = new HttpEntity<>(headersJack);
-		ResponseEntity<TaskSummaries> selfeval = 
-        		restTemplate.exchange("http://localhost:8090/rest/server/queries/tasks/instances/pot-owners",
-                        HttpMethod.GET, findSelfEval, TaskSummaries.class );
-		TaskSummaries tss = selfeval.getBody();
-        log.info(selfeval.toString());
-        tss.getTaskSummaries().forEach(ts->System.out.println("Task: " + ts.getTaskId()));
-        /*
-GET http://localhost:8080/kie-server/services/rest/server/queries/tasks/instances/pot-owners?page=0&pageSize=10&sortOrder=true
-PUT http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/tasks/5/states/claimed
-PUT http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/tasks/5/states/started
-PUT http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/tasks/5/states/completed
- */
-        /*
-        ResponseEntity<String> hreval = 
-        		restTemplate.exchange("http://localhost:8090/hreval?hreval=no+issues",
-                        HttpMethod.GET, requestMary, new ParameterizedTypeReference<String>() {
-                });
-        log.info(hreval.toString());
-*/
-/*
-GET http://localhost:8080/kie-server/services/rest/server/queries/tasks/instances/pot-owners?page=0&pageSize=10&sortOrder=true
-PUT http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/tasks/5/states/claimed
-PUT http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/tasks/5/states/started
-PUT http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/tasks/5/states/completed
-*/
-/*
-        ResponseEntity<String> pmeval = 
-        		restTemplate.exchange("http://localhost:8090/pmeval?pmeval=projects+done",
-                        HttpMethod.GET, requestJohn, new ParameterizedTypeReference<String>() {
-                });
-        log.info(pmeval.toString());
-*/        
-/*
-curl -X GET "http://localhost:8080/kie-server/services/rest/server/containers/Evaluation_1.0.0-SNAPSHOT/processes/instances/2/variables/instances" -H "accept: application/json"
-curl -X GET "http://localhost:8080/kie-server/services/rest/server/queries/processes/instances/2/variables/instances" -H "accept: application/json"
-*/
-/*        
-        ResponseEntity<String> completed = 
-        		restTemplate.exchange("http://localhost:8090/completed",
-                        HttpMethod.GET, requestMary, new ParameterizedTypeReference<String>() {
-                });
-
-        log.info(completed.toString());
-*/        		
+	private void runjBPMClient() {
+		KieServicesClient clientMary = KieServicesFactory.newKieServicesClient(KieServicesFactory.newRestConfiguration(serverUrl, "mary", "mary"));
+		KieServicesClient clientJack = KieServicesFactory.newKieServicesClient(KieServicesFactory.newRestConfiguration(serverUrl, "jack", "jack"));
+		KieServicesClient clientJohn = KieServicesFactory.newKieServicesClient(KieServicesFactory.newRestConfiguration(serverUrl, "john", "john"));
+		
+		ProcessServicesClient processServices = clientMary.getServicesClient(ProcessServicesClient.class);
+		Long processId = processServices.startProcess(containerId, "Evaluation.Evaluation", Collections.singletonMap("employee", "jack"));
+		log.info("Started Process Instance: " + processId.toString());
+		performUserTask(clientJack, "jack", Collections.singletonMap("selfeval", "did lots of work"), false);
+		performUserTask(clientMary, "mary", Collections.singletonMap("hreval", "no incidents"), true);
+		performUserTask(clientJohn, "john", Collections.singletonMap("pmeval", "projects completed"), true);
+		List<VariableInstance> instances = processServices.findVariablesCurrentState(containerId, processId);
+        for( VariableInstance variableInstance: instances ) {
+        	log.info(variableInstance.toString());
+        }
 	}
 	
-	private void createRequestEntities() {
-        byte[] base64CredsBytes = Base64.getEncoder().encode("mary:mary".getBytes());
-        String maryCreds = new String(base64CredsBytes);
+	private void performUserTask(KieServicesClient client, String userId, Map<String, Object> params, boolean claim) {
+		UserTaskServicesClient userTaskServices = client.getServicesClient(UserTaskServicesClient.class);
+		List<TaskSummary> tasks = userTaskServices.findTasksAssignedAsPotentialOwner(userId, 0, 10);
+        for ( TaskSummary taskSummary: tasks ) {
+        	if ( claim ) {
+    			userTaskServices.claimTask(containerId, taskSummary.getId(), userId);
+        	}
+			userTaskServices.startTask(containerId, taskSummary.getId(), userId);
+    		userTaskServices.completeTask(containerId, taskSummary.getId(), userId, params);
+        };
+		
+	}
+
+	private void createRequestHeaders() {
+		HttpHeaders headers = new HttpHeaders();
+        headers.add("content-type", "application/json");
+        headers.add("accept", "application/json");
+
         headersMary = new HttpHeaders();
-        headersMary.add("Authorization", "Basic " + maryCreds);        
-        headersMary.add("accept", "application/json");        
-        headersMary.add("content-type", "application/json");        
+        headersMary.addAll(headers);
+        headersMary.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("mary:mary".getBytes())));
 
-        base64CredsBytes = Base64.getEncoder().encode("jack:jack".getBytes());
-        String jackCreds = new String(base64CredsBytes);
         headersJack = new HttpHeaders();
-        headersJack.add("content-type", "application/json");
-        headersJack.add("accept", "application/json");
-        headersJack.add("Authorization", "Basic " + jackCreds);        
+        headersJack.addAll(headers);
+        headersJack.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("jack:jack".getBytes())));        
 
-        base64CredsBytes = Base64.getEncoder().encode("john:john".getBytes());
-        String johnCreds = new String(base64CredsBytes);
         headersJohn = new HttpHeaders();
-        headersJohn.add("content-type", "application/json");        
-        headersJohn.add("accept", "application/json");        
-        headersJohn.add("Authorization", "Basic " + johnCreds);        
+        headersJohn.addAll(headers);
+        headersJohn.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("john:john".getBytes())));        
 	}
  
  }

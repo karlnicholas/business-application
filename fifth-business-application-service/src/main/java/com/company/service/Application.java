@@ -1,22 +1,19 @@
 package com.company.service;
 
 import java.security.Principal;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.jbpm.services.api.ProcessService;
 import org.jbpm.services.api.RuntimeDataService;
 import org.jbpm.services.api.UserTaskService;
-import org.jbpm.services.api.model.ProcessInstanceDesc;
-import org.jbpm.services.api.model.VariableDesc;
-import org.kie.api.runtime.process.ProcessInstance;
-import org.kie.api.runtime.query.QueryContext;
 import org.kie.api.task.model.TaskSummary;
 import org.kie.internal.query.QueryFilter;
+import org.kie.server.api.model.instance.VariableInstance;
+import org.kie.server.api.model.instance.VariableInstanceList;
+import org.kie.server.services.jbpm.ConvertUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -88,13 +85,10 @@ public class Application  {
     	return ResponseEntity.ok(taskSummaries.size());
     }
 
-    @GetMapping("/completed")
-    public ResponseEntity<List<Collection<VariableDesc>>> completedEvaluations(Principal principal) throws Exception {
-    	Collection<ProcessInstanceDesc> processInstances = runtimeDataService.getProcessInstances(Collections.singletonList(ProcessInstance.STATE_COMPLETED), principal.getName(), new QueryContext());
-    	return ResponseEntity.ok(processInstances.stream()
-			.map(pi->{return runtimeDataService.getVariablesCurrentState(pi.getId());})
-			.collect(Collectors.toList())
-		);
+    @GetMapping("/instances")
+    public ResponseEntity<List<VariableInstance>> instances(Principal principal, @RequestParam Long processInstanceId) throws Exception {
+    	VariableInstanceList vi = ConvertUtils.convertToVariablesList(runtimeDataService.getVariablesCurrentState(processInstanceId));
+    	return ResponseEntity.ok(Arrays.asList(vi.getVariableInstances()));
     }
     
 }
