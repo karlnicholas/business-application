@@ -94,7 +94,9 @@ Building the service rest interface is just a matter of changing the `Applicatio
 	
 The REST endpoint for this will be http://localhost:8090/hello and a `name` parameter is required. The final test URL could be [http://localhost:8090/hello?name=World](http://localhost:8090/hello?name=World). Invoking with endppoint with your browser will return the result `Hello World`.
  
- ### A Springboot application runs in docker very well and so runs in the cloud very well. This capability is added by default to the jBPM sample applications.   
+ ### A Springboot application runs in docker very well and so runs in the cloud very well. 
+ 
+ This capability is added by default to the jBPM sample applications.   
 
   * third-business-application-kjar: Same as second-business-application-kjar.  
   * third-business-application-service: pom.xml modified to point to ../third-business-application-kjar/target/ directory.
@@ -131,7 +133,9 @@ and the API can be tested with curl
     curl http://localhost:8080/hello?name=test
     
 
- ### A major step in jBPM process flows is interacting with users and groups. As another general issue working with jBPM is the movement of business process projects in and out of kie-workbench.   
+ ### A major step in jBPM process flows is interacting with users and groups. 
+ 
+ As another general issue working with jBPM is the movement of business process projects in and out of kie-workbench.   
 
   * forth-business-central-kjar: Project copied from kie-workbench  
   * forth-business-application-service: Updated with endpoints and users and groups to handle human tasks.
@@ -272,3 +276,115 @@ The new REST endpoint accessed with an authenticated http request:
 
     curl -u mary:mary "http://localhost:8090/completed"
     [[{"variableId":"employee","variableInstanceId":"employee","oldValue":"","newValue":"jack","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:51:30.728+0000"},{"variableId":"initiator","variableInstanceId":"initiator","oldValue":"","newValue":"mary","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:51:30.733+0000"},{"variableId":"selfeval","variableInstanceId":"selfeval","oldValue":"","newValue":"selfeval jack","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:52:21.523+0000"},{"variableId":"pmeval","variableInstanceId":"pmeval","oldValue":"","newValue":"pmeval okay","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:52:50.350+0000"},{"variableId":"hreval","variableInstanceId":"hreval","oldValue":"","newValue":"hreval okay","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:53:11.290+0000"}]]
+
+ ### Working with the server requires a client. 
+ 
+ The springboot jBPM server also includes the jBPM REST interface so a client can be written either for the custom API created or the jBPM Rest API included. At this point it would be a matter of preference.    
+
+  * fifth-business-central-kjar: Project copied from forth-business-central-kjar
+  * fifth-business-application-service: Project copied from forth-business-application-service and one API endpoint updated for compatibility with spring `RestTemplate`. 
+  * fifth-business-client: New project with client code to access jBPM workflow programatically. 
+  
+The next obvious step it write some client code to access the springboot jBPM service. Client code should start the business process and interact while simulatin various users. 
+
+The process-flow in this example does an employee evaluation. Mary starts the evaluation process for Jack, Jack does his self evluation, and then Mary and John claim, start, and complete HR and PM evaluations respectively. When this is done the process variables are retrieved so the evaluation responses put in by the various users.
+
+The point of the business process in this case is to both coordinate the various users and to obtain data from them. The bigger question this tutorial answers is about a business process creating informationn for an enterprise. A basic business process is about coordinating users but in the information age users are operating on digital data and not paper documents. jBPM use cases should be expanded to address this reality.
+
+Here is the client code that was written for both the custom API and the server REST api:
+
+	@SpringBootApplication
+	public class Application implements CommandLineRunner  {
+		private static final Logger log = LoggerFactory.getLogger(Application.class);	
+		private String containerId;
+		private String serverBaseUrl;
+		private String serverRestUrl;
+	
+	    public static void main(String[] args) {
+	        SpringApplication.run(Application.class, args);
+	    }
+	
+		@Override
+		public void run(String... args) throws Exception {
+	        containerId = "Evaluation_1.0.0-SNAPSHOT";
+	        serverBaseUrl = "http://localhost:8080";
+	        serverRestUrl = serverBaseUrl + "/rest/server";
+	        runCustomApi();
+	        runjBPMClient();
+		}
+		
+		private void runCustomApi() {
+			RestTemplate restTemplate = new RestTemplate();
+
+	        HttpHeaders headers = new HttpHeaders();
+	        headers.add("content-type", "application/json");
+	        headers.add("accept", "application/json");
+	
+	        HttpHeaders headersMary = new HttpHeaders();
+	        headersMary.addAll(headers);
+	        headersMary.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("mary:mary".getBytes())));
+	
+	        HttpHeaders headersJack = new HttpHeaders();
+	        headersJack.addAll(headers);
+	        headersJack.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("jack:jack".getBytes())));        
+	
+	        HttpHeaders headersJohn = new HttpHeaders();
+	        headersJohn.addAll(headers);
+	        headersJohn.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("john:john".getBytes())));        
+
+	        ResponseEntity<Long> evaluation = 
+	        		restTemplate.exchange(serverBaseUrl + "/evaluation?employee=jack",
+	                        HttpMethod.GET, new HttpEntity<Void>(headersMary), Long.class);
+	        log.info("Started Process Instance: " + evaluation.getBody());
+	
+			restTemplate.exchange(serverBaseUrl + "/selfeval?selfeval=did+great",
+	                HttpMethod.GET, new HttpEntity<>(headersJack), Long.class);
+	
+			restTemplate.exchange(serverBaseUrl + "/hreval?hreval=no+issues",
+	                HttpMethod.GET, new HttpEntity<>(headersMary), Long.class);
+	
+			restTemplate.exchange(serverBaseUrl + "/pmeval?pmeval=projects+done",
+	                HttpMethod.GET, new HttpEntity<>(headersJohn), Long.class);
+	
+	        ResponseEntity<List<VariableInstance>> instances = 
+	        		restTemplate.exchange(serverBaseUrl + "/instances?processInstanceId="+evaluation.getBody(),
+	                        HttpMethod.GET, new HttpEntity<>(headersMary), new ParameterizedTypeReference<List<VariableInstance>>() {
+							});
+	
+	        for( VariableInstance variableInstance: instances.getBody() ) {
+	        	log.info(variableInstance.toString());
+	        }
+		}
+	
+		private void runjBPMClient() {
+			KieServicesClient clientMary = KieServicesFactory.newKieServicesClient(KieServicesFactory.newRestConfiguration(serverRestUrl, "mary", "mary"));
+			KieServicesClient clientJack = KieServicesFactory.newKieServicesClient(KieServicesFactory.newRestConfiguration(serverRestUrl, "jack", "jack"));
+			KieServicesClient clientJohn = KieServicesFactory.newKieServicesClient(KieServicesFactory.newRestConfiguration(serverRestUrl, "john", "john"));
+
+			ProcessServicesClient processServices = clientMary.getServicesClient(ProcessServicesClient.class);
+			Long processId = processServices.startProcess(containerId, "Evaluation.Evaluation", Collections.singletonMap("employee", "jack"));
+			log.info("Started Process Instance: " + processId.toString());
+
+			performUserTask(clientJack, "jack", Collections.singletonMap("selfeval", "did lots of work"), false);
+			performUserTask(clientMary, "mary", Collections.singletonMap("hreval", "no incidents"), true);
+			performUserTask(clientJohn, "john", Collections.singletonMap("pmeval", "projects completed"), true);
+
+			List<VariableInstance> instances = processServices.findVariablesCurrentState(containerId, processId);
+	        for( VariableInstance variableInstance: instances ) {
+	        	log.info(variableInstance.toString());
+	        }
+		}
+		
+		private void performUserTask(KieServicesClient client, String userId, Map<String, Object> params, boolean claim) {
+			UserTaskServicesClient userTaskServices = client.getServicesClient(UserTaskServicesClient.class);
+			List<TaskSummary> tasks = userTaskServices.findTasksAssignedAsPotentialOwner(userId, 0, 10);
+	        for ( TaskSummary taskSummary: tasks ) {
+	        	if ( claim ) {
+	    			userTaskServices.claimTask(containerId, taskSummary.getId(), userId);
+	        	}
+				userTaskServices.startTask(containerId, taskSummary.getId(), userId);
+	    		userTaskServices.completeTask(containerId, taskSummary.getId(), userId, params);
+	        };
+		}
+	 }
+
