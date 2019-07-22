@@ -94,7 +94,7 @@ Building the service rest interface is just a matter of changing the `Applicatio
 	
 The REST endpoint for this will be http://localhost:8090/hello and a `name` parameter is required. The final test URL could be [http://localhost:8090/hello?name=World](http://localhost:8090/hello?name=World). Invoking with endppoint with your browser will return the result `Hello World`.
  
- ### A Springboot application runs in docker very well and so runs in the cloud very well. 
+### A Springboot application runs in docker very well and so runs in the cloud very well. 
  
  This capability is added by default to the jBPM sample applications.   
 
@@ -133,7 +133,7 @@ and the API can be tested with curl
     curl http://localhost:8080/hello?name=test
     
 
- ### A major step in jBPM process flows is interacting with users and groups. 
+### A major step in jBPM process flows is interacting with users and groups. 
  
  As another general issue working with jBPM is the movement of business process projects in and out of kie-workbench.   
 
@@ -277,9 +277,9 @@ The new REST endpoint accessed with an authenticated http request:
     curl -u mary:mary "http://localhost:8090/completed"
     [[{"variableId":"employee","variableInstanceId":"employee","oldValue":"","newValue":"jack","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:51:30.728+0000"},{"variableId":"initiator","variableInstanceId":"initiator","oldValue":"","newValue":"mary","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:51:30.733+0000"},{"variableId":"selfeval","variableInstanceId":"selfeval","oldValue":"","newValue":"selfeval jack","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:52:21.523+0000"},{"variableId":"pmeval","variableInstanceId":"pmeval","oldValue":"","newValue":"pmeval okay","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:52:50.350+0000"},{"variableId":"hreval","variableInstanceId":"hreval","oldValue":"","newValue":"hreval okay","deploymentId":"Evaluation-1_0_0-SNAPSHOT","processInstanceId":1,"dataTimeStamp":"2019-06-28T14:53:11.290+0000"}]]
 
- ### Working with the server requires a client. 
+### Working with the server requires a client. 
  
- The springboot jBPM server also includes the jBPM REST interface so a client can be written either for the custom API created or the jBPM Rest API included. At this point it would be a matter of preference.    
+ The jBPM java libraries also include client support so a client can be written either for the custom API created or the jBPM client library. At this point it would be a matter of preference.    
 
   * fifth-business-central-kjar: Project copied from forth-business-central-kjar
   * fifth-business-application-service: Project copied from forth-business-application-service and one API endpoint updated for compatibility with spring `RestTemplate`. 
@@ -291,7 +291,7 @@ The process-flow in this example does an employee evaluation. Mary starts the ev
 
 The point of the business process in this case is to both coordinate the various users and to obtain data from them. The bigger question this tutorial answers is about a business process creating informationn for an enterprise. A basic business process is about coordinating users but in the information age users are operating on digital data and not paper documents. jBPM use cases should be expanded to address this reality.
 
-Here is the client code that was written for both the custom API and the server REST api:
+Here is the client code that was written for both the custom API and jBPM client library:
 
 	@SpringBootApplication
 	public class Application implements CommandLineRunner  {
@@ -388,3 +388,173 @@ Here is the client code that was written for both the custom API and the server 
 		}
 	 }
 
+### Users need to be notified when a UserTask needs to be completed. 
+
+ The springboot jBPM server has support for using the `javax.mail` api for sending notification emails when `UserTasks` are encountered in the process flow. Notifications must be enabled in each user task and the `javax.mail` client must be configured to connect to an email server. The springboot jBPM server also includes the jBPM REST interface so a client can be written either for the custom API created or the jBPM Rest API included. At this point it would be a matter of preference.    
+
+  * sixth-business-central-kjar: Project copied from fifth-business-central-kjar and modified to include `UserTask` notifcations.
+  * sixth-business-application-service: Project copied from fifth-business-application-service and one API endpoint added to read from test email server. 
+  * sixth-business-client: Project copied from fifth-business-client and code added to use the jBPM Rest API. 
+
+A jBPM server should make notifications when `UserTasks` are waiting to be completed. An effective and straight forward way to accomplish notifications in jBPM is to enable email notifications for each `UserTask` and configure email services in the springboot jBPM server.
+
+Editing notifications for a UserTask must be done in the business-central editor since the Eclipse Plugin editor does not have access to that feature. Updates to the `business-application-kjar` should be pushed back to the kie-server/business-central workbench. This is done by starting business-central. 
+
+  * The sixth-business-central-kjarthe directory copied with git information from the forth-business-central-kjar 
+  * `git push kie master` is run to push the code from forth-business-central-kjar directory into the the workbench.
+  
+Once the kjar code is pushed back info workbench the UserTasks can be clicked on. Under properties and Execution settings can be found for Notifications.
+  
+  * Self Evaluation:
+    * Type: Evaluation
+    * Period: 0
+    * from: mary
+    * To Users: #{employee}
+    * reply-to: mary
+    * Subject: Do Self Evaluation
+    * Body: Do Self Evaluation
+  * HR Evaluation
+    * Type: Evaluation
+    * Period: 0
+    * from: mary
+    * To Groups: HR
+    * reply-to: mary
+    * Subject: Evaluation Needed
+    * Body: Evaluation Needed
+  * PM Evaluation
+    * Type: Evaluation
+    * Period: 0
+    * from: mary
+    * To Groups: PM
+    * reply-to: mary
+    * Subject: Evaluation Needed
+    * Body: Evaluation Needed
+
+The Evalation kjar source is copied back into the the sixth-business-central-kjar project and built and installed with `mvn clean install`. 
+
+A `userinfo.properties` file is added to the `src/main/resources` directory of the sixth-business-application-service project. 
+
+  * Administrator=Administrator@domain.com:en-UK:Administrator
+  * Administrators=administrators@domain.com:en-UK:Administrators:[Administrator]
+  * john=john@domain.com:en-UK:john
+  * jack=jack@domain.com:en-UK:jack
+  * mary=mary@domain.com:en-UK:mary
+  * HR=HR@domain.com:en-uk:HR:[mary]
+  * PM=PM@domain.com:en-uk:PM:[john]
+
+A `email.properties` file is added to the `src/main/resources` directory of the sixth-business-application-service project.
+
+  * mail.transport.protocol=smtp
+  * mail.smtp.host=localhost
+  * mail.smtp.port=3025
+  
+For testing purposes a simple ebmedded email server is added to the project.
+
+	<dependency>
+	  <groupId>com.icegreen</groupId>
+	  <artifactId>greenmail-spring</artifactId>
+	  <version>1.5.10</version>
+	</dependency>
+
+and
+
+	@SpringBootApplication
+	@RestController
+	@ImportAutoConfiguration(GreenMailBean.class)
+	public class Application  {	
+
+Finally, for debugging purposes, a printout REST service for the emails sent is created.
+
+    @GetMapping("/emails")
+    public ResponseEntity<List<String>> instances() throws Exception {
+    	GreenMail greenMail = greenMailBean.getGreenMail();
+    	MimeMessage[] emails = greenMail.getReceivedMessages();
+    	List<String> emailStrings = new ArrayList<>();
+    	for ( MimeMessage email: emails ) {
+    		StringBuilder sb = new StringBuilder();
+    		for ( Address from: email.getFrom()) {
+        		sb.append(" From["+from.toString()+"]");
+    		}
+    		for ( Address recip: email.getAllRecipients()) {
+        		sb.append(" Recipient["+recip.toString()+"]");
+    		}
+    		sb.append(" Subject["+email.getSubject()+"]");
+    		sb.append(" Content["+email.getContent()+"]");
+    		emailStrings.add(sb.toString());
+    	}
+    	return ResponseEntity.ok(emailStrings);
+    }
+
+There is also another way to access the server which is through the jBPM server REST interface. A simple REST client is coded into the `sixth-business-client` project.
+
+	private void runjBPMApi() throws IOException {
+		RestTemplate restTemplate = new RestTemplate();
+		HttpHeaders headers = new HttpHeaders();
+        headers.add("content-type", "application/json");
+        headers.add("accept", "application/json");
+
+    	HttpHeaders headersMary = new HttpHeaders();
+        headersMary.addAll(headers);
+        headersMary.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("mary:mary".getBytes())));
+
+    	HttpHeaders headersJack = new HttpHeaders();
+        headersJack.addAll(headers);
+        headersJack.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("jack:jack".getBytes())));        
+
+    	HttpHeaders headersJohn = new HttpHeaders();
+        headersJohn.addAll(headers);
+        headersJohn.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("john:john".getBytes())));        
+
+        ObjectMapper mapper = new ObjectMapper(); 
+
+        String startEval = "{\"employee\":\"jack\"}";
+        HttpEntity<String> requestEval = new HttpEntity<>(startEval, headersMary); 
+        ResponseEntity<String> evaluation = 
+    		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/processes/Evaluation.Evaluation/instances",
+                HttpMethod.POST, 
+                requestEval, String.class );
+
+        Long processId = Long.parseLong( evaluation.getBody() );
+		log.info("Started Process Instance: " + processId.toString());
+
+        String selfEval = "{\"selfeval\":\"did lots of work\"}";
+        performUserTaskApi(restTemplate, headersJack, selfEval, false, mapper);
+        String pmEval = "{\"pmeval\":\"Projects Done\"}";
+        performUserTaskApi(restTemplate, headersJohn, pmEval, true, mapper);
+        String hrEval = "{\"hreval\":\"No Incidents\"}";
+        performUserTaskApi(restTemplate, headersMary, hrEval, true, mapper);
+
+		HttpEntity<String> requestVariables = new HttpEntity<>(headersMary);
+		ResponseEntity<String> variables = 
+			restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/processes/instances/"+processId+"/variables/instances",
+                HttpMethod.GET, 
+                requestVariables, String.class );
+		JsonNode variableTree = mapper.readTree(variables.getBody());
+		Iterator<JsonNode> variablesItr = variableTree.findValue("variable-instance").elements();
+		while ( variablesItr.hasNext() ) {
+			log.info( variablesItr.next().toString() );
+		}
+    }
+
+	private void performUserTaskApi(RestTemplate restTemplate, HttpHeaders userHeaders, String params, boolean claim, ObjectMapper mapper) throws IOException {
+		HttpEntity<String> emptyEntity = new HttpEntity<>(userHeaders);
+		HttpEntity<String> paramsEntity = new HttpEntity<>(params, userHeaders);
+		ResponseEntity<String> potOwners = 
+    		restTemplate.exchange(serverRestUrl+"/queries/tasks/instances/pot-owners",
+                HttpMethod.GET, emptyEntity, String.class );
+
+		JsonNode evalTree = mapper.readTree(potOwners.getBody());
+        Long taskId = evalTree.findValue("task-id").asLong();
+
+        if ( claim ) {
+    		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/claimed",
+                HttpMethod.PUT, emptyEntity, String.class );
+        }
+		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/started",
+            HttpMethod.PUT, emptyEntity, String.class );
+
+		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/completed",
+            HttpMethod.PUT, paramsEntity, String.class );
+
+	}
+  

@@ -106,8 +106,6 @@ public class Application  {
     }
     @GetMapping("/emails")
     public ResponseEntity<List<String>> instances() throws Exception {
-//    	List<ProcessInstanceWithVarsDesc> result = queryService.query("getVariablesCurrentState", ProcessInstanceWithVarsQueryMapper.get(), new QueryContext(), QueryParam.equalsTo(COLUMN_PROCESSINSTANCEID, 1L));
-//    	System.out.println(result);
     	GreenMail greenMail = greenMailBean.getGreenMail();
     	MimeMessage[] emails = greenMail.getReceivedMessages();
     	List<String> emailStrings = new ArrayList<>();

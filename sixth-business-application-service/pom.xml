@@ -26,11 +26,11 @@
 	</properties>
 
 	<dependencies>
-<dependency>
-  <groupId>com.icegreen</groupId>
-  <artifactId>greenmail-spring</artifactId>
-  <version>1.5.10</version>
-</dependency>
+		<dependency>
+		  <groupId>com.icegreen</groupId>
+		  <artifactId>greenmail-spring</artifactId>
+		  <version>1.5.10</version>
+		</dependency>
 		<dependency>
 			<groupId>org.kie</groupId>
 			<artifactId>kie-server-spring-boot-starter</artifactId>

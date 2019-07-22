@@ -70,23 +70,23 @@ public class Application implements CommandLineRunner  {
         headersJohn.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("john:john".getBytes())));        
 
         ResponseEntity<Long> evaluation = 
-        		restTemplate.exchange(serverBaseUrl + "/evaluation?employee=jack",
-                        HttpMethod.GET, new HttpEntity<Void>(headersMary), Long.class);
+    		restTemplate.exchange(serverBaseUrl + "/evaluation?employee=jack",
+                HttpMethod.GET, new HttpEntity<Void>(headersMary), Long.class);
         log.info("Started Process Instance: " + evaluation.getBody());
 
 		restTemplate.exchange(serverBaseUrl + "/selfeval?selfeval=did+great",
-                HttpMethod.GET, new HttpEntity<>(headersJack), Long.class);
+            HttpMethod.GET, new HttpEntity<>(headersJack), Long.class);
 
 		restTemplate.exchange(serverBaseUrl + "/hreval?hreval=no+issues",
-                HttpMethod.GET, new HttpEntity<>(headersMary), Long.class);
+            HttpMethod.GET, new HttpEntity<>(headersMary), Long.class);
 
 		restTemplate.exchange(serverBaseUrl + "/pmeval?pmeval=projects+done",
-                HttpMethod.GET, new HttpEntity<>(headersJohn), Long.class);
+            HttpMethod.GET, new HttpEntity<>(headersJohn), Long.class);
 
         ResponseEntity<List<VariableInstance>> instances = 
-        		restTemplate.exchange(serverBaseUrl + "/instances?processInstanceId="+evaluation.getBody(),
-                        HttpMethod.GET, new HttpEntity<>(headersMary), new ParameterizedTypeReference<List<VariableInstance>>() {
-						});
+    		restTemplate.exchange(serverBaseUrl + "/instances?processInstanceId="+evaluation.getBody(),
+                HttpMethod.GET, new HttpEntity<>(headersMary), new ParameterizedTypeReference<List<VariableInstance>>() {
+			});
 
         for( VariableInstance variableInstance: instances.getBody() ) {
         	log.info(variableInstance.toString());
@@ -148,9 +148,9 @@ public class Application implements CommandLineRunner  {
         HttpEntity<String> requestEval = new HttpEntity<>(startEval, headersMary); 
         ResponseEntity<String> evaluation = 
     		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/processes/Evaluation.Evaluation/instances",
-                    HttpMethod.POST, 
-                    requestEval, String.class );
-        log.debug(evaluation.toString());
+                HttpMethod.POST, 
+                requestEval, String.class );
+
         Long processId = Long.parseLong( evaluation.getBody() );
 		log.info("Started Process Instance: " + processId.toString());
 
@@ -163,7 +163,7 @@ public class Application implements CommandLineRunner  {
 
 		HttpEntity<String> requestVariables = new HttpEntity<>(headersMary);
 		ResponseEntity<String> variables = 
-		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/processes/instances/"+processId+"/variables/instances",
+			restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/processes/instances/"+processId+"/variables/instances",
                 HttpMethod.GET, 
                 requestVariables, String.class );
 		JsonNode variableTree = mapper.readTree(variables.getBody());
@@ -178,27 +178,21 @@ public class Application implements CommandLineRunner  {
 		HttpEntity<String> paramsEntity = new HttpEntity<>(params, userHeaders);
 		ResponseEntity<String> potOwners = 
     		restTemplate.exchange(serverRestUrl+"/queries/tasks/instances/pot-owners",
-                    HttpMethod.GET, emptyEntity, String.class );
+                HttpMethod.GET, emptyEntity, String.class );
 
 		JsonNode evalTree = mapper.readTree(potOwners.getBody());
         Long taskId = evalTree.findValue("task-id").asLong();
-		log.debug(taskId.toString());
 
         if ( claim ) {
-    		ResponseEntity<String> claimed = 
-        		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/claimed",
-                        HttpMethod.PUT, emptyEntity, String.class );
-            log.debug(claimed.toString());
+    		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/claimed",
+                HttpMethod.PUT, emptyEntity, String.class );
         }
-		ResponseEntity<String> started = 
-    		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/started",
-                    HttpMethod.PUT, emptyEntity, String.class );
-        log.debug(started.toString());
+		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/started",
+            HttpMethod.PUT, emptyEntity, String.class );
 
-		ResponseEntity<String> completed = 
-    		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/completed",
-                    HttpMethod.PUT, paramsEntity, String.class );
-        log.debug(completed.toString());
+		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/completed",
+            HttpMethod.PUT, paramsEntity, String.class );
+
 	}
  
  }
