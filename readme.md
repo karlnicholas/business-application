@@ -558,3 +558,15 @@ There is also another way to access the server which is through the jBPM server 
 
 	}
   
+### Using a custom model 
+     
+  * seventh-business-central-kjar: Project copied from fifth-business-central-kjar and modified to include `UserTask` notifcations.
+  * seventh-business-application-service: Project copied from fifth-business-application-service and one API endpoint added to read from test email server. 
+  * seventh-business-application-model: Project copied from fifth-business-application-service and one API endpoint added to read from test email server. 
+  * seventh-business-client: Project copied from fifth-business-client and code added to use the jBPM Rest API. 
+
+Update model
+Build and install model
+Open Business Central.
+Add model to settings in depdencencies.
+Set process variables.
