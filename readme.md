@@ -558,15 +558,250 @@ There is also another way to access the server which is through the jBPM server 
 
 	}
   
-### Using a custom model 
+### Using a custom data model 
      
-  * seventh-business-central-kjar: Project copied from fifth-business-central-kjar and modified to include `UserTask` notifcations.
-  * seventh-business-application-service: Project copied from fifth-business-application-service and one API endpoint added to read from test email server. 
-  * seventh-business-application-model: Project copied from fifth-business-application-service and one API endpoint added to read from test email server. 
-  * seventh-business-client: Project copied from fifth-business-client and code added to use the jBPM Rest API. 
+  * seventh-business-central-kjar: Project copied from sixth-business-central-kjar and modified to use `EmployeeEvaluation` data model.
+  * seventh-business-application-model: Project copied from origin-business-application-model and Plain Old Java Object `EmployeeEvaluation` added. 
+  * seventh-business-application-service: Project copied from sixth-business-application-service and changed to use `EmployeeEvaluation` model. 
+  * seventh-business-client: Project copied from sixth-business-client and changed to use `EmployeeEvaluation` model. 
 
-Update model
-Build and install model
-Open Business Central.
-Add model to settings in depdencencies.
-Set process variables.
+The origin-business-application-model project is copied and a POJO is created for `EmployeeEvaluation`. EmployeeEvaluation contains the fields `employee`, `seflEval`, `pmEval`, and `hrEval`, all the current fields that are part of the current business process flow. The seventh-business-application-model project is built and installed into the local maven repository with `mvn clean install`.
+
+Start and open jBPM `Business Central` server. Ensure the current project is loaded into the server. Open and edit the `Evaluation` project. In settings add a dependency to the EmployeeEvaluation model project with GAV `com.company:business-application-model:1.0-SNAPSHOT`. Remove the individual variables from the business process and add the `employeeEvaluation` variable of type `com.company.model.EmployeeEvaluation`. 
+
+For the UserTasks I added a variable for both the input and the output and set them both to `employeeEvaluation`. The UserTasks take the process variable `employeeEvaluation` as input and as output to the tasks. The UserTasks will not be directly using the input or output variable since the completion of the UserTasks includes an `EmployeeEvaluation` as a parameter. However, since the employeeEvaluation data from selfEval is passed to both hrEval and pmEval then response from the selfEval is available to users completing hrEval or pmEval if desired.  
+
+Copy the Evaluation kjar project back to the maven project and build and install it into the local maven repository with `mvn clean install`.
+ 
+The Springboot jBPM server custom API is updated to handle the `EmployeeEvaluation`. The API endpoints are modified to accept POST requests with `EmployeeEvaluation` objects in the request body.
+
+    @PostMapping("/evaluation")
+    public ResponseEntity<Long> startEvaluation(Principal principal, @RequestBody EmployeeEvaluation employeeEvaluation) throws Exception {
+    	Long processInstanceId = -1L;
+    	if ( principal != null ) {
+	    	processInstanceId = processService.startProcess("Evaluation_1.0.0-SNAPSHOT", "Evaluation.Evaluation", Collections.singletonMap("employeeEvaluation", employeeEvaluation));
+    	}
+    	return ResponseEntity.ok(processInstanceId);
+    }
+
+    @PostMapping("/selfeval")
+    public ResponseEntity<Integer> selfEvaluation(Principal principal, @RequestBody EmployeeEvaluation employeeEvaluation) throws Exception {
+    	List<TaskSummary> taskSummaries = runtimeDataService.getTasksAssignedAsPotentialOwner(principal.getName(), new QueryFilter());
+    	taskSummaries.forEach(s->{
+    		userTaskService.start(s.getId(), principal.getName());
+    		userTaskService.complete(s.getId(), principal.getName(), Collections.singletonMap("employeeEvaluation", employeeEvaluation));
+    	});
+    	return ResponseEntity.ok(taskSummaries.size());
+    }
+
+    @PostMapping("/hreval")
+    public ResponseEntity<Integer> hrEvaluation(Principal principal, @RequestBody EmployeeEvaluation employeeEvaluation) throws Exception {
+    	List<TaskSummary> taskSummaries = runtimeDataService.getTasksAssignedAsPotentialOwner(principal.getName(), new QueryFilter());
+    	taskSummaries.forEach(s->{
+    		userTaskService.claim(s.getId(), principal.getName());
+    		userTaskService.start(s.getId(), principal.getName());
+    		userTaskService.complete(s.getId(), principal.getName(), Collections.singletonMap("employeeEvaluation", employeeEvaluation));
+    	});
+    	return ResponseEntity.ok(taskSummaries.size());
+    }
+
+    @PostMapping("/pmeval")
+    public ResponseEntity<Integer> pmEvaluation(Principal principal, @RequestBody EmployeeEvaluation employeeEvaluation) throws Exception {
+    	List<TaskSummary> taskSummaries = runtimeDataService.getTasksAssignedAsPotentialOwner(principal.getName(), new QueryFilter());
+    	taskSummaries.forEach(s->{
+    		userTaskService.claim(s.getId(), principal.getName());
+    		userTaskService.start(s.getId(), principal.getName());
+    		userTaskService.complete(s.getId(), principal.getName(), Collections.singletonMap("employeeEvaluation", employeeEvaluation));
+    	});
+    	return ResponseEntity.ok(taskSummaries.size());
+    }
+
+    @GetMapping("/instances")
+    public ResponseEntity<List<VariableInstance>> instances(Principal principal, @RequestParam Long processInstanceId) throws Exception {
+    	VariableInstanceList vi = ConvertUtils.convertToVariablesList(runtimeDataService.getVariablesCurrentState(processInstanceId));
+    	return ResponseEntity.ok(Arrays.asList(vi.getVariableInstances()));
+    }
+
+
+The client is updated to pass an `EmployeeEvaluation` object to the various APIs.
+
+	private void runCustomApi() {
+		RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("content-type", "application/json");
+        headers.add("accept", "application/json");
+
+        HttpHeaders headersMary = new HttpHeaders();
+        headersMary.addAll(headers);
+        headersMary.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("mary:mary".getBytes())));
+
+        HttpHeaders headersJack = new HttpHeaders();
+        headersJack.addAll(headers);
+        headersJack.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("jack:jack".getBytes())));        
+
+        HttpHeaders headersJohn = new HttpHeaders();
+        headersJohn.addAll(headers);
+        headersJohn.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("john:john".getBytes())));
+        
+        EmployeeEvaluation employeeEvaluation = new EmployeeEvaluation();
+        employeeEvaluation.setEmployee("jack");
+
+        ResponseEntity<Long> evaluation = 
+    		restTemplate.exchange(serverBaseUrl + "/evaluation",
+                HttpMethod.POST, new HttpEntity<EmployeeEvaluation>(employeeEvaluation, headersMary), Long.class);
+        log.info("Started Process Instance: " + evaluation.getBody());
+
+        employeeEvaluation.setSelfEval("Did lots of work");
+		restTemplate.exchange(serverBaseUrl + "/selfeval",
+            HttpMethod.POST, new HttpEntity<EmployeeEvaluation>(employeeEvaluation, headersJack), Long.class);
+
+        employeeEvaluation.setHrEval("no incidents");
+		restTemplate.exchange(serverBaseUrl + "/hreval",
+            HttpMethod.POST, new HttpEntity<EmployeeEvaluation>(employeeEvaluation, headersMary), Long.class);
+
+        employeeEvaluation.setHrEval("Projects Completed");
+		restTemplate.exchange(serverBaseUrl + "/pmeval",
+            HttpMethod.POST, new HttpEntity<EmployeeEvaluation>(employeeEvaluation, headersJohn), Long.class);
+
+        ResponseEntity<List<VariableInstance>> instances = 
+    		restTemplate.exchange(serverBaseUrl + "/instances?processInstanceId="+evaluation.getBody(),
+                HttpMethod.GET, new HttpEntity<>(headersMary), new ParameterizedTypeReference<List<VariableInstance>>() {
+			});
+
+        for( VariableInstance variableInstance: instances.getBody() ) {
+        	log.info(variableInstance.toString());
+        }
+	}
+
+	private void runjBPMClient() throws JsonProcessingException {
+		KieServicesClient clientMary = KieServicesFactory.newKieServicesClient(KieServicesFactory.newRestConfiguration(serverRestUrl, "mary", "mary").setExtraClasses(Collections.singleton(EmployeeEvaluation.class)));
+		KieServicesClient clientJack = KieServicesFactory.newKieServicesClient(KieServicesFactory.newRestConfiguration(serverRestUrl, "jack", "jack").setExtraClasses(Collections.singleton(EmployeeEvaluation.class)));
+		KieServicesClient clientJohn = KieServicesFactory.newKieServicesClient(KieServicesFactory.newRestConfiguration(serverRestUrl, "john", "john").setExtraClasses(Collections.singleton(EmployeeEvaluation.class)));
+
+        ObjectMapper mapper = new ObjectMapper(); 
+        EmployeeEvaluation employeeEvaluation = new EmployeeEvaluation();
+        employeeEvaluation.setEmployee("jack");
+
+		ProcessServicesClient processServices = clientMary.getServicesClient(ProcessServicesClient.class);
+		Long processId = processServices.startProcess(containerId, "Evaluation.Evaluation", Collections.singletonMap("employeeEvaluation", employeeEvaluation));
+		log.info("Started Process Instance: " + processId.toString());
+
+        employeeEvaluation.setSelfEval("Did lots of work");
+		performUserTask(clientJack, "jack", employeeEvaluation, false, mapper);
+        employeeEvaluation.setHrEval("no incidents");
+		performUserTask(clientMary, "mary", employeeEvaluation, true, mapper);
+        employeeEvaluation.setPmEval("Projects Completed");
+		performUserTask(clientJohn, "john", employeeEvaluation, true, mapper);
+
+		List<VariableInstance> instances = processServices.findVariablesCurrentState(containerId, processId);
+        for( VariableInstance variableInstance: instances ) {
+        	log.info(variableInstance.toString());
+        }
+	}
+	
+	private void performUserTask(KieServicesClient client, String userId, EmployeeEvaluation employeeEvaluation, boolean claim, ObjectMapper mapper) throws JsonProcessingException {
+		UserTaskServicesClient userTaskServices = client.getServicesClient(UserTaskServicesClient.class);
+		List<TaskSummary> tasks = userTaskServices.findTasksAssignedAsPotentialOwner(userId, 0, 10);
+        for ( TaskSummary taskSummary: tasks ) {
+        	if ( claim ) {
+    			userTaskServices.claimTask(containerId, taskSummary.getId(), userId);
+        	}
+			userTaskServices.startTask(containerId, taskSummary.getId(), userId);
+    		userTaskServices.completeTask(containerId, taskSummary.getId(), userId, Collections.singletonMap("employeeEvaluation", employeeEvaluation));
+        };
+	}
+	
+	private void runjBPMApi() throws IOException {
+		RestTemplate restTemplate = new RestTemplate();
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add("accept", "application/json");
+
+    	HttpHeaders headersMary = new HttpHeaders();
+        headersMary.addAll(headers);
+        headersMary.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("mary:mary".getBytes())));
+
+    	HttpHeaders headersJack = new HttpHeaders();
+        headersJack.addAll(headers);
+        headersJack.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("jack:jack".getBytes())));
+
+    	HttpHeaders headersJohn = new HttpHeaders();
+        headersJohn.addAll(headers);
+        headersJohn.add("Authorization", "Basic " + new String(Base64.getEncoder().encode("john:john".getBytes())));
+
+        ObjectMapper mapper = new ObjectMapper(); 
+
+        EmployeeEvaluation employeeEvaluation = new EmployeeEvaluation();
+        employeeEvaluation.setEmployee("jack");
+
+        HttpEntity<String> requestEval = new HttpEntity<>(mapper.writeValueAsString(
+        		Collections.singletonMap("employeeEvaluation", employeeEvaluation)), headersMary); 
+        ResponseEntity<String> evaluation = 
+    		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/processes/Evaluation.Evaluation/instances",
+                HttpMethod.POST, 
+                requestEval, String.class );
+
+        Long processId = Long.parseLong( evaluation.getBody() );
+		log.info("Started Process Instance: " + processId.toString());
+		
+
+        employeeEvaluation.setSelfEval("Did lots of work");
+        performUserTaskApi(restTemplate, headersJack, employeeEvaluation, false, mapper);
+        employeeEvaluation.setPmEval("Projects Completed");
+        performUserTaskApi(restTemplate, headersJohn, employeeEvaluation, true, mapper);
+        employeeEvaluation.setHrEval("no incidents");
+        performUserTaskApi(restTemplate, headersMary, employeeEvaluation, true, mapper);
+
+		HttpEntity<String> requestVariables = new HttpEntity<>(headersMary);
+		ResponseEntity<String> variables = 
+			restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/processes/instances/"+processId+"/variables/instances",
+                HttpMethod.GET, 
+                requestVariables, String.class );
+		JsonNode variableTree = mapper.readTree(variables.getBody());
+		Iterator<JsonNode> variablesItr = variableTree.findValue("variable-instance").elements();
+		while ( variablesItr.hasNext() ) {
+			JsonNode node = variablesItr.next();
+			log.info( node.toString() );
+		}		
+    }
+	
+
+	private void performUserTaskApi(RestTemplate restTemplate, HttpHeaders userHeaders, EmployeeEvaluation employeeEvaluation, boolean claim, ObjectMapper mapper) throws IOException {
+		HttpEntity<String> emptyEntity = new HttpEntity<>(userHeaders);
+		HttpEntity<String> paramsEntity = new HttpEntity<>(mapper.writeValueAsString(Collections.singletonMap("employeeEvaluation", employeeEvaluation)), userHeaders);
+		ResponseEntity<String> potOwners = 
+    		restTemplate.exchange(serverRestUrl+"/queries/tasks/instances/pot-owners",
+                HttpMethod.GET, emptyEntity, String.class );
+
+		JsonNode evalTree = mapper.readTree(potOwners.getBody());
+        Long taskId = evalTree.findValue("task-id").asLong();
+
+        if ( claim ) {
+    		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/claimed",
+                HttpMethod.PUT, emptyEntity, String.class );
+        }
+		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/started",
+            HttpMethod.PUT, emptyEntity, String.class );
+
+		restTemplate.exchange(serverRestUrl+"/containers/"+containerId+"/tasks/"+taskId+"/states/completed",
+            HttpMethod.PUT, paramsEntity, String.class );
+
+	}
+   
+The result highlights an issue with using a custom external data model in the jBPM server.
+
+    Started Process Instance: 1
+	VariableInstance{variableName='initiator', oldValue='', value='mary', processInstanceId=1, date=Fri Jul 26 10:33:13 MST 2019}
+	VariableInstance{variableName='employeeEvaluation', oldValue='com.company.model.EmployeeEvaluation@5837855b', value='com.company.model.EmployeeEvaluation@25e1c51a', processInstanceId=1, date=Fri Jul 26 10:33:18 MST 2019}
+	Started Process Instance: 2
+	VariableInstance{variableName='initiator', oldValue='', value='mary', processInstanceId=2, date=Fri Jul 26 10:33:21 MST 2019}
+	VariableInstance{variableName='employeeEvaluation', oldValue='com.company.model.EmployeeEvaluation@3c0fb81c', value='com.company.model.EmployeeEvaluation@414b63ef', processInstanceId=2, date=Fri Jul 26 10:33:26 MST 2019}
+	Started Process Instance: 3
+	{"name":"initiator","old-value":"","value":"mary","process-instance-id":3,"modification-date":{"java.util.Date":1564162406734}}
+	{"name":"employeeEvaluation","old-value":"{employee=jack, selfEval=Did lots of work, hrEval=null, pmEval=Projects Completed}","value":"{employee=jack, selfEval=Did lots of work, hrEval=no incidents, pmEval=Projects Completed}","process-instance-id":3,"modification-date":{"java.util.Date":1564162411547}}
+
+As noted in the jBPM documentation data variables are saved by invoking the `toString()` method of the custom data model. For the springboot custom jBPM server and REST API, and for the jBPM java client libraries, the result is shown as an instance of a Java object. For the jBPM REST interface the data is retrieved but put into a `VariableDescList` which holds values in a human readable format. Good for humans to read but not good for machines to read. In the sixth-business-application all the various client APIs retrieved the process variabes in String format as well but since all the process variables were strings they representation was the same. However, it was also in human readable format which is also not good for computer applications.
+
+Since all the data submitted to the process has been submitted through the client then the client knows whats been submitted to the jBPM business process regardless of whether or not the data can be properly retrieved. The issue then is what happens if another client submits data to the business process and the business process is using a custom data model -- how will the first client be able to read that data if it needs to?
+
