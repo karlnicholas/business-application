@@ -87,7 +87,7 @@ public class ClientApplication implements CommandLineRunner  {
 		restTemplate.exchange(serverBaseUrl + "/hreval",
             HttpMethod.POST, new HttpEntity<EmployeeEvaluation>(employeeEvaluation, headersMary), Long.class);
 
-        employeeEvaluation.setHrEval("Projects Completed");
+        employeeEvaluation.setPmEval("Projects Completed");
 		restTemplate.exchange(serverBaseUrl + "/pmeval",
             HttpMethod.POST, new HttpEntity<EmployeeEvaluation>(employeeEvaluation, headersJohn), Long.class);
 
