@@ -805,8 +805,31 @@ As noted in the jBPM documentation data variables are saved by invoking the `toS
 
 Since all the data submitted to the process has been submitted through the client then the client knows whats been submitted to the jBPM business process regardless of whether or not the data can be properly retrieved. The issue then is what happens if another client submits data to the business process and the business process is using a custom data model -- how will the first client be able to read that data if it needs to?
 
-### Using Builtin Workitem Handlers 
+### Export Data with built in Rest Workitem Handler 
      
   * eighth-business-application-service: Project copied from seventh-business-application-service and api endpoint added for `Rest Workitem Handler`. 
   * eighth-business-central-kjar: Project copied from seventh-business-central-kjar and modified to use `Rest Workitem Handler`.
 
+Using Workitems is an important part of a jBPM business process. There are several built in workitems in the jBPM distribution for sending emails, making rest calls, and the like. 
+
+A REST call can be used to make a callback to the Spring jBPM application to retrieve the process data, or do any other function, at any point in the business process. 
+
+A callback enpoint is created in the `eighth-business-application-service` application to handle a rest callback from the jBPM process. It is made as a POST operation and receives the user login and `EmployeeEvaluation` data.
+
+    @PostMapping("/datamodel")
+    public ResponseEntity<Void> datamodelCallback(Principal principal, @RequestBody EmployeeEvaluation employeeEvaluation) throws Exception {
+    	logger.info("Principal: {}", principal);
+    	logger.info("EmployeeEvaluation: {}, {}, {}, {}", 
+    			employeeEvaluation.getEmployee(), 
+    			employeeEvaluation.getSelfEval(), 
+    			employeeEvaluation.getPmEval(), 
+    			employeeEvaluation.getHrEval()
+    			);
+    	return ResponseEntity.ok().build();
+    }
+
+A REST Workitem handler is installed in the business process and added to the process at the end of the flow. The `URL` is set to the spring application process endpoint, the `Method` is set to POST, the `Content` is set as `employeeEvaluation`, and a `ContentType` is added as `application/json`.
+
+When executed the business process calls back to the spring application and sends the final evaluation data.
+
+  
