@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="https://www.thymeleaf.org"
+	xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+<head>
+<title>Spring Security Example</title>
+</head>
+<body>
+	<h1>jBPM Project Page</h1>
+
+	<p>
+		Click <a th:href="@{/hello}">here</a> login and check tasks.
+	</p>
+	<div>
+		<th:block th:if="${task.taskState.name() == 'READY'}">
+			<form action="#" th:action="@{/home}" method="post">
+				<button type="submit" name="action" value="starttask">Start Task</button>
+			</form>
+		</th:block>
+	</div>
+	<div>
+		<th:block th:if="${task.taskState.name() == 'STARTED'}">
+			<form action="#" th:action="@{/home}" th:object="${task}" method="post">
+				<button type="submit" name="action" value="submitcomment">Submit Comment</button>
+				<p>Comment: <input type="text" th:field="*{comment}" /></p>
+			</form>
+		</th:block>
+	</div>
+
+</body>
+</html>
