@@ -6,37 +6,37 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 @Controller
-public class HomeController {
+public class TaskController {
 	private Task task;
 	@ModelAttribute("task")
 	public Task getTask() {
 	    return task;
 	}
 
-	public HomeController() {
+	public TaskController() {
 		task = new Task();
 		task.setTaskState(Task.TASK_STATE.READY);
 	}
 	
 	
-	@RequestMapping({"/","/home"})
+	@RequestMapping({"/task"})
 	public String showSeedstarters() {
-	    return "home";
+	    return "task";
 	}
 
-	@RequestMapping(value="/home", method=RequestMethod.POST, params="action=starttask")
+	@RequestMapping(value="/task", method=RequestMethod.POST, params="action=starttask")
 	public String starttask() {
 		System.out.println("action=starttask");
 		task.setTaskState(Task.TASK_STATE.STARTED);
-	    return "redirect:/home";
+	    return "redirect:/task";
 	}
 
-	@RequestMapping(value="/home", method=RequestMethod.POST, params="action=submitcomment")
+	@RequestMapping(value="/task", method=RequestMethod.POST, params="action=submitcomment")
 	public String comment(@ModelAttribute Task task) {
 		System.out.println("action=submitcomment");
 		System.out.println("comment=" + task.getComment());
 		this.task.setTaskState(Task.TASK_STATE.NONE);
-	    return "redirect:/home";
+	    return "redirect:/task";
 	}
 	
 }
