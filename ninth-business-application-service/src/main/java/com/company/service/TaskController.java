@@ -1,6 +1,8 @@
 package com.company.service;
 
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,9 +10,14 @@ import java.util.Map;
 import org.jbpm.services.api.ProcessService;
 import org.jbpm.services.api.RuntimeDataService;
 import org.jbpm.services.api.UserTaskService;
+import org.jbpm.services.api.model.ProcessInstanceDesc;
+import org.kie.api.runtime.query.QueryContext;
 import org.kie.api.task.model.Status;
 import org.kie.api.task.model.TaskSummary;
 import org.kie.internal.query.QueryFilter;
+import org.kie.server.api.model.instance.VariableInstance;
+import org.kie.server.api.model.instance.VariableInstanceList;
+import org.kie.server.services.jbpm.ConvertUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -54,6 +61,32 @@ public class TaskController {
         		task.setTaskState(TASK_STATE.NONE);
         	}
         	task.setMemberHr(hasRole("ROLE_HR"));
+        	if ( task.isMemberHr() ) {
+        		Collection<ProcessInstanceDesc> piDescs = runtimeDataService.getProcessInstances(new QueryContext());
+        		List<Eval> evals = new ArrayList<>();
+        		task.setEvals(evals);
+        		for ( ProcessInstanceDesc piDesc: piDescs ) {
+                	VariableInstanceList vil = ConvertUtils.convertToVariablesList(runtimeDataService.getVariablesCurrentState(piDesc.getId()));
+                	Eval eval = new Eval();
+                	evals.add(eval);
+					for ( VariableInstance vi : vil.getItems() ) {
+						switch( vi.getVariableName()) {
+						case "employee":
+							eval.setEmployee(vi.getValue());
+							break;
+						case "selfeval":
+							eval.setSelfeval(vi.getValue());
+							break;
+						case "pmeval":
+							eval.setPmeval(vi.getValue());
+							break;
+						case "hreval":
+							eval.setHreval(vi.getValue());
+							break;
+						}
+                	}
+        		}
+        	}
     	}
 	    return "task";
 	}
@@ -87,11 +120,11 @@ public class TaskController {
 		if ( taskSummaries.size() > 0 ) {
 			String taskName = taskSummaries.get(0).getName().toLowerCase();
 			if ( taskName.contains("self") ) 
-				params.put("selfEvalulation", task.getComment());
+				params.put("selfeval", task.getComment());
 			else if ( taskName.contains("hr") ) 
-				params.put("hrEvalulation", task.getComment());
+				params.put("hreval", task.getComment());
 			else if ( taskName.contains("pm") ) 
-				params.put("pmEvalulation", task.getComment());
+				params.put("pmeval", task.getComment());
 		}
 		return params;
 	}

@@ -3,39 +3,67 @@
 	xmlns:th="https://www.thymeleaf.org"
 	xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
 <head>
-<title>jBPM  Example</title>
+<title>jBPM Example</title>
 </head>
 <body>
 	<h1>Evaluation Task Page</h1>
 
-	<p>
-		Any tasks you have can be completed here.
-	</p>
+	<p>Any tasks you have can be completed here.</p>
 	<div>
-	<p>
-		<th:block th:if="${task.taskState.name() == 'NONE'}">
+		<p>
+			<th:block th:if="${task.taskState.name() == 'NONE'}">
 		You have NO tasks to complete.
 		</th:block>
-	</p>
+		</p>
 	</div>
 	<div>
 		<th:block th:if="${task.taskState.name() == 'RESERVED'}">
-			<form action="#" th:action="@{/task}" th:object="${task}" method="post">
-				<button type="submit" name="action" value="completeevaluation">Complete Evaluation Comment</button>
-				<p>Comment: <input type="text" th:field="*{comment}" /></p>
+			<form action="#" th:action="@{/task}" th:object="${task}"
+				method="post">
+				<button type="submit" name="action" value="completeevaluation">Complete
+					Evaluation Comment</button>
+				<p>
+					Comment: <input type="text" th:field="*{comment}" />
+				</p>
 			</form>
 		</th:block>
 	</div>
 	<div>
 		<th:block th:if="${task.memberHr}">
-			<form action="#" th:action="@{/task}" th:object="${task}" method="post">
-				<button type="submit" name="action" value="startevaluation">Start New Evaluation For Employee</button>
-				<p>Employee: <input type="text" th:field="*{comment}" /></p>
+			<form action="#" th:action="@{/task}" th:object="${task}"
+				method="post">
+				<button type="submit" name="action" value="startevaluation">Start
+					New Evaluation For Employee</button>
+				<p>
+					Employee: <input type="text" th:field="*{comment}" />
+				</p>
 			</form>
+			<table>
+				<thead>
+					<tr>
+						<th>Employee</th>
+						<th>Self Eval</th>
+						<th>PM Eval</th>
+						<th>HR Eval</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:if="${task.evals.empty}">
+						<td colspan="2">No Evaluations Available</td>
+					</tr>
+					<tr th:each="eval : ${task.evals}">
+						<td><span th:text="${eval.employee}"> Employee </span></td>
+						<td><span th:text="${eval.selfeval}"> Self Eval</span></td>
+						<td><span th:text="${eval.pmeval}"> PM Eval</span></td>
+						<td><span th:text="${eval.hreval}"> HR Eval</span></td>
+					</tr>
+				</tbody>
+			</table>
+
 		</th:block>
 	</div>
-    <form th:action="@{/logout}" method="POST">
-         <input type="submit" value="Logout"/>
-    </form>
-    </body>
+	<form th:action="@{/logout}" method="POST">
+		<input type="submit" value="Logout" />
+	</form>
+</body>
 </html>
