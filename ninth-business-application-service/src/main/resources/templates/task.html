@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="https://www.thymeleaf.org"
+	xmlns:sec="https://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+<head>
+<title>jBPM  Example</title>
+</head>
+<body>
+	<h1>Evaluation Task Page</h1>
+
+	<p>
+		Any tasks you have can be completed here.
+	</p>
+	<div>
+	<p>
+		<th:block th:if="${task.taskState.name() == 'NONE'}">
+		You have NO tasks to complete.
+		</th:block>
+	</p>
+	</div>
+	<div>
+		<th:block th:if="${task.taskState.name() == 'RESERVED'}">
+			<form action="#" th:action="@{/task}" th:object="${task}" method="post">
+				<button type="submit" name="action" value="completeevaluation">Complete Evaluation Comment</button>
+				<p>Comment: <input type="text" th:field="*{comment}" /></p>
+			</form>
+		</th:block>
+	</div>
+	<div>
+		<th:block th:if="${task.memberHr}">
+			<form action="#" th:action="@{/task}" th:object="${task}" method="post">
+				<button type="submit" name="action" value="startevaluation">Start New Evaluation For Employee</button>
+				<p>Employee: <input type="text" th:field="*{comment}" /></p>
+			</form>
+		</th:block>
+	</div>
+    <form th:action="@{/logout}" method="POST">
+         <input type="submit" value="Logout"/>
+    </form>
+    </body>
+</html>
