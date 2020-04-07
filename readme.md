@@ -832,4 +832,24 @@ A REST Workitem handler is installed in the business process and added to the pr
 
 When executed the business process calls back to the spring application and sends the final evaluation data.
 
+### A Complete BPMS Driven Spring Boot Application.
+
+  * ninth-business-application-kjar: 
+  * ninth-business-application-service:  
+ 
+ BPMS application can can exist in several forms. A regular web client style application is an obvious choice, especially for the example of an employee evaluation that is being used here. If a company were to roll out this business process as an application a website would be an obvious choice. 
+
+Everything needed to build a complete application has been developed. A business process exists, can be queried, and the results exported and displayed. 
+
+Every employee will have to login to the application. Each user has roles as before, HR, PM, and other. In order to exercise this application, follow these steps:
+
+  1. login as mary (user mary, password mary)
+  2. create an evaluation for jack by entering jack's name in the input field and clicking on 'create new employee evaluation'. Notice a new entry in the evalution's list.
+  3. login as jack and enter a comment for his self evaluation.
+  4. login as john and enter a PM comment for jack's evaluation.
+  5. login again as mary and enter a HR comment jack's evaluation.
   
+ A few new classes were created. `Task` is created to hold state for the logged in users. `Eval` is a copy of `EmployeeEvalation`. `TaskController` and `McvConfig` handle web application logic. Thymeleaf web pages are held in the resources/templates directory. THe changes are relatively simple but beyond the scope of this log.
+ 
+ Each evaluation and it's data are saved in the database.
+ 
