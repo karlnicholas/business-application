@@ -16,7 +16,7 @@
 	</parent>
 
 	<properties>
-		<version.org.kie>7.23.0.Final</version.org.kie>
+		<version.org.kie>7.35.0.Final</version.org.kie>
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

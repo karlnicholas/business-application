@@ -9,7 +9,7 @@
   <name>Evaluation</name>
   <description>Evaluation Example</description>
   <properties>
-    <version.org.kie>7.23.0.Final</version.org.kie>
+    <version.org.kie>7.35.0.Final</version.org.kie>
     <maven.compiler.source>1.8</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.target>1.8</maven.compiler.target>
@@ -24,13 +24,13 @@
     <dependency>
       <groupId>org.kie</groupId>
       <artifactId>kie-internal</artifactId>
-      <version>7.23.0.Final</version>
+      <version>7.35.0.Final</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.optaplanner</groupId>
       <artifactId>optaplanner-core</artifactId>
-      <version>7.23.0.Final</version>
+      <version>7.35.0.Final</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -42,13 +42,13 @@
     <dependency>
       <groupId>org.optaplanner</groupId>
       <artifactId>optaplanner-persistence-jaxb</artifactId>
-      <version>7.23.0.Final</version>
+      <version>7.35.0.Final</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.kie</groupId>
       <artifactId>kie-api</artifactId>
-      <version>7.23.0.Final</version>
+      <version>7.35.0.Final</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -85,6 +85,7 @@
                       <goal>build</goal>
                       <goal>mvelValidator</goal>
                       <goal>generateModel</goal>
+                      <goal>validateDMN</goal>
                     </goals>
                   </pluginExecutionFilter>
                   <action>
