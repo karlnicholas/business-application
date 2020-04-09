@@ -7,12 +7,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import javax.jms.ConnectionFactory;
-import javax.jms.Queue;
 import javax.mail.Address;
 import javax.mail.internet.MimeMessage;
 
-import org.apache.activemq.command.ActiveMQQueue;
 import org.jbpm.services.api.ProcessService;
 import org.jbpm.services.api.RuntimeDataService;
 import org.jbpm.services.api.UserTaskService;
@@ -24,23 +21,11 @@ import org.kie.server.services.jbpm.ConvertUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jms.DefaultJmsListenerContainerFactoryConfigurer;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jms.annotation.EnableJms;
-import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
-import org.springframework.jms.config.JmsListenerContainerFactory;
-import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.support.converter.MappingJackson2MessageConverter;
-import org.springframework.jms.support.converter.MessageConverter;
-import org.springframework.jms.support.converter.MessageType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -51,7 +36,7 @@ import com.company.model.EmployeeEvaluation;
 import com.icegreen.greenmail.spring.GreenMailBean;
 import com.icegreen.greenmail.util.GreenMail;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.kendelong.jmxconsole.web.controller", "com.company.service"})
 @RestController
 @ImportAutoConfiguration(GreenMailBean.class)
 public class ServerApplication implements CommandLineRunner {
@@ -70,7 +55,7 @@ public class ServerApplication implements CommandLineRunner {
         SpringApplication.run(ServerApplication.class, args);
     }
  
-    @PostMapping("/evaluation")
+	@PostMapping("/evaluation")
     public ResponseEntity<Long> startEvaluation(Principal principal, @RequestBody EmployeeEvaluation employeeEvaluation) throws Exception {
     	Long processInstanceId = -1L;
     	if ( principal != null ) {
@@ -148,17 +133,17 @@ public class ServerApplication implements CommandLineRunner {
     			);
     	return ResponseEntity.ok().build();
     }
-    @Autowired
-    private Sender sender;
 
     @Autowired
-    private Receiver receiver;
+    Sender sender;
+    
+    @Autowired
+    Receiver receiver;
 
-	@Override
+    @Override
 	public void run(String... args) throws Exception {
 	      sender.send("Hello Spring JMS ActiveMQ!");
 
-	      receiver.getLatch().await(10000, TimeUnit.MILLISECONDS);
-		
+	      receiver.getLatch().await(10000, TimeUnit.MILLISECONDS);	
 	}
 }
