@@ -145,5 +145,8 @@ public class ServerApplication implements CommandLineRunner {
 	      sender.send("Hello Spring JMS ActiveMQ!");
 
 	      receiver.getLatch().await(10000, TimeUnit.MILLISECONDS);	
+	      
+	      JmsSender jmsSender = new JmsSender();
+	      jmsSender.sendMessage();
 	}
 }
