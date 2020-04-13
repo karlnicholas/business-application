@@ -15,6 +15,18 @@
  */
 package org.jbpm.process.workitem.jms;
 
+import java.util.Properties;
+
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
+import javax.jms.MessageProducer;
+import javax.jms.Session;
+import javax.jms.TextMessage;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+
 import org.jbpm.process.workitem.core.AbstractLogOrThrowWorkItemHandler;
 import org.jbpm.process.workitem.core.util.RequiredParameterValidator;
 import org.jbpm.process.workitem.core.util.Wid;
@@ -26,10 +38,6 @@ import org.jbpm.process.workitem.core.util.service.WidService;
 import org.kie.api.runtime.process.WorkItem;
 import org.kie.api.runtime.process.WorkItemManager;
 import org.kie.internal.runtime.Cacheable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.jms.core.JmsTemplate;
 
 @Wid(widfile = "JmsWorkItem.wid", name = "JmsPublishMessages",
         displayName = "JmsPublishMessages",
@@ -38,8 +46,7 @@ import org.springframework.jms.core.JmsTemplate;
         category = "${artifactId}",
         icon = "JmsPublishMessages.png",
         parameters = {
-                @WidParameter(name = "Message"), 
-                @WidParameter(name = "QueueName")
+                @WidParameter(name = "Message")
         },
         results = {
                 @WidResult(name = "Result")
@@ -53,13 +60,21 @@ import org.springframework.jms.core.JmsTemplate;
         ))
 
 public class JmsWorkItemHandler extends AbstractLogOrThrowWorkItemHandler implements Cacheable {
-
-    private static final Logger logger = LoggerFactory.getLogger(JmsWorkItemHandler.class);
     
-    private JmsTemplate jmsTemplate;
+	private ConnectionFactory connectionFactory;
+	private Destination destination;
     
-    public JmsWorkItemHandler(JmsTemplate jmsTemplate) {
-    	this.jmsTemplate = jmsTemplate;
+    public JmsWorkItemHandler() {
+    	try {
+			Properties props = new Properties(); 
+			props.setProperty(Context.INITIAL_CONTEXT_FACTORY, "org.apache.activemq.jndi.ActiveMQInitialContextFactory"); 
+			props.setProperty(Context.PROVIDER_URL, "vm://embedded-broker?broker.persistent=false"); 
+			javax.naming.Context jndiContext = new InitialContext(props);
+			connectionFactory = (ConnectionFactory)jndiContext.lookup("ConnectionFactory"); 
+			destination = (Destination)jndiContext.lookup("dynamicQueues/helloworld.q"); 
+		} catch (NamingException e) {
+			throw new RuntimeException(e);
+		}
     }
     
     @Override
@@ -70,10 +85,22 @@ public class JmsWorkItemHandler extends AbstractLogOrThrowWorkItemHandler implem
     	try {
 	        RequiredParameterValidator.validate(this.getClass(),
 	                workItem);
+
+	        String message = (String) workItem.getParameter("message");
 	
-	        String message = (String) workItem.getParameter("Message");
-	        String queueName = (String) workItem.getParameter("QueueName");
-	        jmsTemplate.convertAndSend(queueName, message);
+	        Connection connection = connectionFactory.createConnection();
+	        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+	        MessageProducer producer = session.createProducer(destination);
+	        
+	        TextMessage textMessage = session.createTextMessage();
+	    
+	        textMessage.setText(message);
+	        producer.send(textMessage);		
+	        
+	        producer.close();
+	        session.close();
+	        connection.close();
     
     	} catch (Exception e) {
             handleException(e);

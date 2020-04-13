@@ -1,36 +1,31 @@
 package com.company.service;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
+import java.util.Properties;
 
-import javax.jms.BytesMessage;
 import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
-
-import org.apache.activemq.ActiveMQConnectionFactory;
+import javax.naming.Context;
+import javax.naming.InitialContext;
 
 public class JmsSender {
-	
-	private ActiveMQConnectionFactory activeMQConnectionFactory;
-
-	public JmsSender() {
-		activeMQConnectionFactory = new ActiveMQConnectionFactory();
-        activeMQConnectionFactory.setBrokerURL("vm://embedded-broker?broker.persistent=false");
-	}
 
 	public void sendMessage() {
-		Destination destination;
 		boolean transacted = false;
         
 		try {
 	
-	        Connection connection = activeMQConnectionFactory.createConnection();
+			Properties props = new Properties(); 
+			props.setProperty(Context.INITIAL_CONTEXT_FACTORY, "org.apache.activemq.jndi.ActiveMQInitialContextFactory"); 
+			props.setProperty(Context.PROVIDER_URL, "vm://embedded-broker?broker.persistent=false"); 
+			javax.naming.Context jndiContext = new InitialContext(props);
+			ConnectionFactory connectionFactory = (ConnectionFactory)jndiContext.lookup("ConnectionFactory"); 
+			Destination destination = (Destination)jndiContext.lookup("dynamicQueues/helloworld.q"); 
+			Connection connection = connectionFactory.createConnection();
 	        Session session = connection.createSession(transacted, Session.AUTO_ACKNOWLEDGE);
-	        destination = session.createQueue("helloworld.q");
-
 	        MessageProducer producer = session.createProducer(destination);
 	        
 	        TextMessage message = session.createTextMessage();
@@ -43,7 +38,6 @@ public class JmsSender {
 	        connection.close();
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
