@@ -1,7 +1,0 @@
-/target/
-/bin/
-/.settings/
-.classpath
-.project
-.factorypath
-/transaction-logs/

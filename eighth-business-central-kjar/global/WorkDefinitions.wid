@@ -1,4 +1,20 @@
 [
+        [
+            "name" : "JmsPublishMessages",
+            "displayName" : "JmsPublishMessages",
+            "category" : "jms-workitem",
+            "description" : "",
+            "parameters" : [
+                                "Message" : new StringDataType()
+
+            ],
+            "results" : [
+                                "Result" : new StringDataType()
+
+            ],
+            "icon" : "JmsPublishMessages.png"
+
+        ],
   [
     "name" : "Email",
     "parameters" : [
@@ -10,7 +26,6 @@
     "displayName" : "Email",
     "icon" : "defaultemailicon.gif"
   ],
-
   [
     "name" : "Log",
     "parameters" : [
@@ -19,7 +34,6 @@
     "displayName" : "Log",
     "icon" : "defaultlogicon.gif"
   ],
-
   [
     "name" : "WebService",
     "parameters" : [
@@ -37,7 +51,6 @@
     "displayName" : "WS",
     "icon" : "defaultservicenodeicon.png"
   ],
-
   [
     "name" : "Rest",
     "parameters" : [

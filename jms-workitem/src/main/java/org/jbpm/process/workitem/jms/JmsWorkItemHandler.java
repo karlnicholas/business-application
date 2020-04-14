@@ -15,6 +15,7 @@
  */
 package org.jbpm.process.workitem.jms;
 
+import java.util.Map;
 import java.util.Properties;
 
 import javax.jms.Connection;
@@ -101,7 +102,9 @@ public class JmsWorkItemHandler extends AbstractLogOrThrowWorkItemHandler implem
 	        producer.close();
 	        session.close();
 	        connection.close();
-    
+            
+            manager.completeWorkItem(workItem.getId(), null);
+            
     	} catch (Exception e) {
             handleException(e);
         }

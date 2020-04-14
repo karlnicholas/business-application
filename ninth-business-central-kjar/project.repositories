@@ -3,8 +3,16 @@
     <repository>
       <include>true</include>
       <metadata>
+        <id>jboss-public-repository-group</id>
+        <url>https://repository.jboss.org/nexus/content/groups/public/</url>
+        <source>PROJECT</source>
+      </metadata>
+    </repository>
+    <repository>
+      <include>true</include>
+      <metadata>
         <id>local</id>
-        <url>/home/jenkins/.m2/repository</url>
+        <url>C:\Users\karln/.m2/repository</url>
         <source>LOCAL</source>
       </metadata>
     </repository>

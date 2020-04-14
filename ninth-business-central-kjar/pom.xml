@@ -8,6 +8,12 @@
   <packaging>kjar</packaging>
   <name>Evaluation</name>
   <description>Evaluation Example</description>
+  <properties>
+    <version.org.kie>7.23.0.Final</version.org.kie>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.target>1.8</maven.compiler.target>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>com.thoughtworks.xstream</groupId>
@@ -45,15 +51,52 @@
       <version>7.23.0.Final</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jbpm.contrib</groupId>
+      <artifactId>jms-workitem</artifactId>
+      <version>7.35.0.Final</version>
+    </dependency>
   </dependencies>
-  <properties>
-    <version.org.kie>7.23.0.Final</version.org.kie>
-    <maven.compiler.target>1.8</maven.compiler.target>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
-
+  <repositories>
+    <repository>
+      <id>jboss-public-repository-group</id>
+      <name>JBoss Public Repository Group</name>
+      <url>https://repository.jboss.org/nexus/content/groups/public/</url>
+    </repository>
+  </repositories>
   <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.kie</groupId>
+                    <artifactId>kie-maven-plugin</artifactId>
+                    <versionRange>[${version.org.kie},)</versionRange>
+                    <goals>
+                      <goal>injectreactive</goal>
+                      <goal>generateDMNModel</goal>
+                      <goal>build</goal>
+                      <goal>mvelValidator</goal>
+                      <goal>generateModel</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore>true</ignore>
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
       <plugin>
         <groupId>org.kie</groupId>
@@ -62,41 +105,7 @@
         <extensions>true</extensions>
       </plugin>
     </plugins>
-    <pluginManagement>
-    	<plugins>
-    		<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-    		<plugin>
-    			<groupId>org.eclipse.m2e</groupId>
-    			<artifactId>lifecycle-mapping</artifactId>
-    			<version>1.0.0</version>
-    			<configuration>
-    				<lifecycleMappingMetadata>
-    					<pluginExecutions>
-    						<pluginExecution>
-    							<pluginExecutionFilter>
-							        <groupId>org.kie</groupId>
-							        <artifactId>kie-maven-plugin</artifactId>
-    								<versionRange>[${version.org.kie},)</versionRange>
-    								<goals>
-    									<goal>injectreactive</goal>
-    									<goal>generateDMNModel</goal>
-    									<goal>build</goal>
-    									<goal>mvelValidator</goal>
-    									<goal>generateModel</goal>
-    								</goals>
-    							</pluginExecutionFilter>
-    							<action>
-    								<ignore>true</ignore>
-    							</action>
-    						</pluginExecution>
-    					</pluginExecutions>
-    				</lifecycleMappingMetadata>
-    			</configuration>
-    		</plugin>
-    	</plugins>
-    </pluginManagement>
   </build>
-
   <profiles>
     <profile>
       <id>docker</id>
@@ -106,7 +115,7 @@
         </property>
       </activation>
       <build>
-        <plugins> 
+        <plugins>
           <plugin>
             <artifactId>maven-assembly-plugin</artifactId>
             <executions>
@@ -154,7 +163,7 @@
         </property>
       </activation>
       <build>
-        <plugins> 
+        <plugins>
           <plugin>
             <artifactId>maven-assembly-plugin</artifactId>
             <executions>
@@ -195,20 +204,4 @@
       </build>
     </profile>
   </profiles>
-  <repositories>
-    <!-- Bootstrap repository to locate the parent pom when the parent pom 
-      has not been build locally. -->
-    <repository>
-      <id>jboss-public-repository-group</id>
-      <name>JBoss Public Repository Group</name>
-      <url>https://repository.jboss.org/nexus/content/groups/public/</url>
-      <layout>default</layout>
-      <releases>
-        <updatePolicy>never</updatePolicy>
-      </releases>
-      <snapshots>
-        <updatePolicy>daily</updatePolicy>
-      </snapshots>
-    </repository>
-  </repositories>
 </project>
